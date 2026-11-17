@@ -13,6 +13,7 @@ import {
   ToolbarItem,
   ToolbarMore,
   useChrome,
+  ZoomPill,
 } from '@openplanr/canvas/react';
 import { type ReactNode, type RefObject, useMemo, useState } from 'react';
 import type { ChromePreference } from '../../app/browser-preferences.js';
@@ -34,7 +35,7 @@ import {
   WelcomeLabels,
 } from './floating-chrome-parts.js';
 import { focusViewFilter } from './keyboard-coordinator.js';
-import { type RouteTool, useRouteTools } from './route-tools.js';
+import { type RouteTool, routeSlotRef, useCanvasRoute, useRouteTools } from './route-tools.js';
 import {
   CapabilityChip,
   ConnectionChip,
@@ -57,6 +58,7 @@ export {
   useChromeRegions,
   useCloseUnpinnedPanels,
 } from './floating-chrome-parts.js';
+export { useCanvasRoute } from './route-tools.js';
 
 /** Widest viewport that keeps the phone top bar and bottom navigation. */
 export const PHONE_MAX_WIDTH = 599;
@@ -141,7 +143,8 @@ export function FloatingChrome(props: FloatingChromeProps) {
   const { route, routeKey, compact, main } = props;
   const chrome = useChrome();
   const [helpOpen, setHelpOpen] = useState(false);
-  usePageChromeBehavior({ routeKey, main });
+  const canvas = useCanvasRoute();
+  usePageChromeBehavior({ routeKey, main, canvas });
   const product = route.product ?? 'system';
   const access = `${product === 'operate' ? 'Governed actions' : 'Read-only'} · ${
     props.connectionState === 'connected' || props.connectionState === 'read-only'
@@ -153,6 +156,7 @@ export function FloatingChrome(props: FloatingChromeProps) {
     <ChromeRoot className={compact ? 'pc-chrome pc-chrome--compact' : 'pc-chrome'}>
       <MainMenu {...props} />
       <NavigationPanel id={NAVIGATION_PANEL}>
+        <div ref={routeSlotRef('panel')} />
         <NavigationSections
           route={route}
           counts={props.counts}
@@ -175,7 +179,7 @@ export function FloatingChrome(props: FloatingChromeProps) {
           onClick={() => chrome.togglePanel(SIDEBAR_PANEL)}
         >
           <PcIcon name="panel-left-close" size={16} />
-          {props.selectionPending && !sidebarOpen ? (
+          {(canvas ? chrome.inspectorPending : props.selectionPending && !sidebarOpen) ? (
             <span
               className="canvas-chrome-selection-dot"
               data-inspector-pending=""
@@ -194,8 +198,15 @@ export function FloatingChrome(props: FloatingChromeProps) {
             </section>
           ) : null
         }
-        outline={<PageOutline main={main} refreshKey={`${routeKey}:${sidebarOpen}`} />}
+        outline={
+          canvas ? (
+            <div ref={routeSlotRef('outline')} />
+          ) : (
+            <PageOutline main={main} refreshKey={`${routeKey}:${sidebarOpen}`} />
+          )
+        }
       />
+      <ZoomPill />
       <HelpButton onClick={() => setHelpOpen((open) => !open)} />
       {helpOpen ? (
         <HelpCard
@@ -327,7 +338,7 @@ function toolItem(tool: RouteTool): ReactNode {
     <ToolbarItem
       key={tool.id}
       label={tool.label}
-      icon={tool.icon ? <PcIcon name={tool.icon} size={16} /> : tool.label}
+      icon={tool.icon ? <PcIcon name={tool.icon} size={16} /> : (tool.glyph ?? tool.label)}
       shortcut={tool.shortcut}
       active={tool.active}
       onClick={tool.run}
@@ -359,7 +370,9 @@ function RouteToolbar({
         {compact
           ? grouped.map((tool) => (
               <MenuItem key={tool.id} shortcut={tool.shortcut} onClick={tool.run}>
-                {`Group by ${tool.label.toLowerCase()}`}
+                {tool.groupLabel
+                  ? `${tool.groupLabel}: ${tool.label}`
+                  : `Group by ${tool.label.toLowerCase()}`}
               </MenuItem>
             ))
           : null}
@@ -386,7 +399,7 @@ function RouteToolbar({
       <div id={TOPBAR_ROUTE_TABS_ID} className="pc-chrome-route-tabs" />
       {compact && active && next ? (
         <ToolbarItem
-          label={`Group: ${active.label}. Switch to ${next.label}`}
+          label={`${active.groupLabel ?? 'Group'}: ${active.label}. Switch to ${next.label}`}
           icon={active.label}
           active
           onClick={next.run}
@@ -395,7 +408,8 @@ function RouteToolbar({
         grouped.map(toolItem)
       )}
       {grouped.length > 0 && ungrouped.length > 0 ? (
-        <span className="pc-chrome-divider" aria-hidden="true" />
+        // Keyed by the route's tools so a route change replaces the divider instead of moving it.
+        <span key={grouped[0]?.id} className="pc-chrome-divider" aria-hidden="true" />
       ) : null}
       {ungrouped.map(toolItem)}
     </FloatingToolbar>

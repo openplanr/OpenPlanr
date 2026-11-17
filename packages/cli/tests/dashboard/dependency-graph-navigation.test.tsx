@@ -1,43 +1,36 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
-import { useEffect, useRef, useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { drawMinimap } from '@openplanr/canvas';
+import { ChromeProvider } from '@openplanr/canvas/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { type ComponentProps, useEffect, useRef, useState } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  DependencyGraph,
   type GraphEdge,
   type GraphNode,
+  graphLayout,
 } from '../../../../apps/dashboard/src/design-system/components/console-planr.js';
+import {
+  GraphCanvas,
+  graphCanvasModel,
+} from '../../../../apps/dashboard/src/features/planning/graph-canvas.js';
 import { installKeyboardCoordinator } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
+import { routeSlotRef } from '../../../../apps/dashboard/src/features/shell/route-tools.js';
+import {
+  captureCanvasControllers,
+  liveController,
+  settleFrames,
+  stubStageSize,
+} from './fixtures/graph-canvas-harness.js';
 
-let frames: FrameRequestCallback[];
 const disposers: (() => void)[] = [];
 
-beforeEach(() => {
-  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
-    return this.classList.contains('pc-graph') ? 1000 : 0;
-  });
-  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
-    return this.classList.contains('pc-graph') ? 520 : 0;
-  });
-  frames = [];
-  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-    frames.push(callback);
-    return frames.length;
-  });
-});
 afterEach(() => {
   for (const dispose of disposers.splice(0)) dispose();
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-
-function flushFrames() {
-  act(() => {
-    for (const callback of frames.splice(0)) callback(0);
-  });
-}
 
 function required<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error('Required fixture value unavailable');
@@ -48,11 +41,41 @@ function node(index: number): GraphNode {
   const id = `T-${String(index).padStart(4, '0')}`;
   return {
     id,
-    canonicalId: `SPEC-A/${id}`,
+    canonicalId: id,
     type: 'task',
     label: `Task ${index}`,
     status: 'outstanding',
   };
+}
+
+function chain(count: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  const nodes = Array.from({ length: count }, (_, index) => node(index));
+  return {
+    nodes,
+    edges: nodes.slice(1).map((item, index) => ({
+      from: required(nodes[index]).id,
+      to: item.id,
+      kind: 'depends_on',
+    })),
+  };
+}
+
+type Props = Partial<ComponentProps<typeof GraphCanvas>> &
+  Pick<ComponentProps<typeof GraphCanvas>, 'nodes' | 'edges'>;
+
+function Graph(props: Props) {
+  return (
+    <section data-route-kind="planning.graph">
+      <GraphCanvas
+        flow="source-to-target"
+        scope="scope"
+        selectedId={null}
+        onSelect={() => undefined}
+        onFocusSelect={() => undefined}
+        {...props}
+      />
+    </section>
+  );
 }
 
 function keyboard(root: HTMLElement) {
@@ -74,20 +97,30 @@ function keyboard(root: HTMLElement) {
   return announce;
 }
 
-function viewport(figure: HTMLElement, width = 800, height = 400) {
-  Object.defineProperties(figure, {
-    clientWidth: { configurable: true, value: width },
-    clientHeight: { configurable: true, value: height },
+/** Mounts a chrome slot the way the floating chrome does, for the minimap and the Outline. */
+function chromeSlot(name: 'panel' | 'outline'): HTMLElement {
+  const element = document.createElement('div');
+  document.body.append(element);
+  act(() => routeSlotRef(name)(element));
+  disposers.push(() => {
+    act(() => routeSlotRef(name)(null));
+    element.remove();
   });
-  fireEvent.scroll(figure);
+  return element;
 }
 
-describe('dependency graph navigation', () => {
-  it('names nodes with the full rendered ID and title, keeping status out of the visible label', () => {
+function item(container: HTMLElement, id: string): HTMLElement {
+  return required(container.querySelector<HTMLElement>(`[data-keyboard-item="${id}"]`));
+}
+
+describe('dependency graph on the canvas engine', () => {
+  it('names nodes with the full rendered ID and title, keeping status out of the visible label', async () => {
+    stubStageSize({ width: 1000, height: 600 });
     const title =
       'Preserve the full artifact title for speech navigation even when its visual line is truncated';
     const artifact = { ...node(0), label: title, status: 'done' };
-    const rendered = render(<DependencyGraph nodes={[artifact]} edges={[]} />);
+    const rendered = render(<Graph nodes={[artifact]} edges={[]} />);
+    await settleFrames();
     const button = rendered.getByRole('button', { name: `${artifact.id} ${title}`, exact: true });
     expect(button.hasAttribute('aria-label')).toBe(false);
     expect(button.querySelector('.pc-graph-node__label')?.textContent).toBe(title);
@@ -95,45 +128,10 @@ describe('dependency graph navigation', () => {
     expect(button.querySelector('.pc-artifact')?.closest('[aria-hidden="true"]')).toBeTruthy();
   });
 
-  it('measures the real viewport before admitting any nodes and keeps that first painted set stable', () => {
-    const nodes = Array.from({ length: 20 }, (_, index) => node(index));
-    const edges = nodes
-      .slice(1)
-      .map((item, index) => ({ from: required(nodes[index]).id, to: item.id }));
-    const nodesAtMeasurement: number[] = [];
-    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
-      if (!this.classList.contains('pc-graph')) return 0;
-      nodesAtMeasurement.push(this.querySelectorAll('.pc-graph-node').length);
-      return 300;
-    });
-    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
-      return this.classList.contains('pc-graph') ? 200 : 0;
-    });
-    const rendered = render(<DependencyGraph nodes={nodes} edges={edges} />);
-    expect(nodesAtMeasurement[0]).toBe(0);
-    const painted = Array.from(rendered.container.querySelectorAll<HTMLElement>('.pc-graph-node'));
-    expect(painted.map((item) => item.dataset.keyboardItem)).toEqual([
-      'SPEC-A/T-0000',
-      'SPEC-A/T-0001',
-    ]);
-    const geometry = painted.map((item) => item.style.cssText);
-    flushFrames();
-    fireEvent.scroll(rendered.getByRole('figure', { name: 'Dependency graph' }));
-    expect(painted.every((item) => item.isConnected)).toBe(true);
-    expect(painted.map((item) => item.style.cssText)).toEqual(geometry);
-    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(painted.length);
-  });
-
-  it('keeps a zero-size graph empty until ResizeObserver reports a visible viewport', () => {
-    let width = 0;
-    let height = 0;
-    let notify: (() => void) | undefined;
-    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
-      return this.classList.contains('pc-graph') ? width : 0;
-    });
-    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
-      return this.classList.contains('pc-graph') ? height : 0;
-    });
+  it('admits no nodes until the stage has a measured size', async () => {
+    const size = { width: 0, height: 0 };
+    stubStageSize(size);
+    const observers: (() => void)[] = [];
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -141,231 +139,220 @@ describe('dependency graph navigation', () => {
         unobserve = vi.fn();
         disconnect = vi.fn();
         constructor(callback: ResizeObserverCallback) {
-          notify = () => callback([], this);
+          observers.push(() => callback([], this));
         }
       },
     );
-    const nodes = Array.from({ length: 20 }, (_, index) => node(index));
-    const edges = nodes
-      .slice(1)
-      .map((item, index) => ({ from: required(nodes[index]).id, to: item.id }));
-    const rendered = render(<DependencyGraph nodes={nodes} edges={edges} />);
-    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
-    const canvas = required(rendered.container.querySelector<HTMLElement>('.pc-graph__canvas'));
-    const geometry = canvas.style.cssText;
+    const { nodes, edges } = chain(20);
+    const rendered = render(<Graph nodes={nodes} edges={edges} />);
+    await settleFrames();
     expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(0);
-    expect(rendered.container.querySelectorAll('.pc-graph__edge')).toHaveLength(0);
-    width = 300;
-    act(() => required(notify)());
-    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(0);
-    height = 200;
-    act(() => required(notify)());
-    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(2);
-    expect(rendered.container.querySelectorAll('.pc-graph__edge').length).toBeGreaterThan(0);
-    expect(figure.style.height).toBe('520px');
-    expect(canvas.style.cssText).toBe(geometry);
+    size.width = 800;
+    size.height = 400;
+    act(() => {
+      for (const notify of observers) notify();
+    });
+    window.dispatchEvent(new Event('resize'));
+    await waitFor(() =>
+      expect(rendered.container.querySelectorAll('.pc-graph-node').length).toBeGreaterThan(0),
+    );
+    expect(rendered.container.querySelector('.pc-graph-stage')?.getAttribute('style')).toBeNull();
   });
 
-  it('refits a focused component when its canvas narrows without a window resize and never culls it', () => {
-    const nodes = Array.from({ length: 4 }, (_, index) => node(index));
-    const edges = nodes
-      .slice(1)
-      .map((item, index) => ({ from: required(nodes[index]).id, to: item.id }));
-    const focusedIds = new Set(nodes.map((item) => required(item.canonicalId)));
-    let width = 1000;
-    let notify: (() => void) | undefined;
-    const observe = vi.fn();
-    vi.stubGlobal('innerWidth', 1440);
-    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
-      return this.classList.contains('pc-graph') ? width : 0;
-    });
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe = observe;
-        disconnect = vi.fn();
-        constructor(callback: ResizeObserverCallback) {
-          notify = () => callback([], this);
-        }
-      },
-    );
-    const rendered = render(
-      <DependencyGraph nodes={nodes} edges={edges} focusedIds={focusedIds} />,
-    );
-    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
-    const canvas = required(rendered.container.querySelector<HTMLElement>('.pc-graph__canvas'));
-    const content = required(rendered.container.querySelector<HTMLElement>('.pc-graph__content'));
-    expect(observe).toHaveBeenCalledExactlyOnceWith(figure, { box: 'border-box' });
-    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
-    const initialZoom = content.style.transform;
-    width -= 344;
-    act(() => required(notify)());
-    expect(window.innerWidth).toBe(1440);
-    expect(content.style.transform).not.toBe(initialZoom);
-    expect(Number.parseFloat(canvas.style.width)).toBeLessThanOrEqual(width);
-    expect(Number.parseFloat(canvas.style.height)).toBeLessThanOrEqual(figure.clientHeight);
-    expect(figure.style.height).toBe('520px');
-    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
-    for (const item of rendered.container.querySelectorAll<HTMLElement>('.pc-graph-node')) {
-      expect(item.style.visibility).toBe('');
-      expect(item.hasAttribute('inert')).toBe(false);
+  it('keeps mounted geometry world-fixed while the camera pans and zooms', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1000, height: 600 });
+    const { nodes, edges } = chain(4);
+    const rendered = render(<Graph nodes={nodes} edges={edges} />);
+    await settleFrames();
+    const first = item(rendered.container, 'T-0000');
+    const geometry = first.style.cssText;
+    const world = required(rendered.container.querySelector<HTMLElement>('.canvas-world'));
+    const camera = world.style.transform;
+    act(() => liveController(created).panBy(40, 30));
+    await settleFrames(2);
+    expect(world.style.transform).not.toBe(camera);
+    expect(first.isConnected).toBe(true);
+    expect(first.style.cssText).toBe(geometry);
+  });
+
+  it('fits a new focus scope into the safe area once and keeps the camera across live geometry', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1000, height: 600 });
+    const { nodes, edges } = chain(4);
+    const rendered = render(<Graph nodes={nodes} edges={edges} scope="first" />);
+    await settleFrames();
+    const controller = liveController(created);
+    const fitted = controller.getCamera();
+    expect(fitted.zoom).toBeLessThanOrEqual(1);
+    for (const id of nodes.map((entry) => entry.id)) {
+      const box = item(rendered.container, id)
+        .style.transform.match(/-?[\d.]+/gu)
+        ?.map(Number);
+      const corner = controller.worldToScreen({
+        x: required(box)[0] ?? 0,
+        y: required(box)[1] ?? 0,
+      });
+      expect(corner.x).toBeGreaterThanOrEqual(0);
+      expect(corner.x + 230 * fitted.zoom).toBeLessThanOrEqual(1000);
     }
-    fireEvent.click(rendered.getByRole('button', { name: 'Zoom in', exact: true }));
-    flushFrames();
-    const manualZoom = content.style.transform;
-    Object.defineProperty(figure, 'clientHeight', { configurable: true, value: 500 });
-    figure.scrollLeft = 8000;
-    fireEvent.scroll(figure);
-    expect(content.style.transform).toBe(manualZoom);
-    expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
-    expect(rendered.container.querySelectorAll('.pc-graph-node[aria-hidden="true"]')).toHaveLength(
-      0,
-    );
-    const panned = figure.scrollLeft;
-    const zoom = content.style.transform;
+    act(() => controller.setCamera({ x: 300, y: 10, zoom: 0.7 }));
     rendered.rerender(
-      <DependencyGraph
-        nodes={nodes.map((item) => ({ ...item, label: `${item.label} updated` }))}
+      <Graph
+        nodes={nodes.map((entry) => ({ ...entry, label: `${entry.label} updated` }))}
         edges={edges}
-        focusedIds={new Set(focusedIds)}
+        scope="first"
       />,
     );
-    expect(figure.scrollLeft).toBe(panned);
-    expect(content.style.transform).toBe(zoom);
-    expect(figure.style.height).toBe('520px');
+    await settleFrames(4);
+    expect(controller.getCamera()).toEqual({ x: 300, y: 10, zoom: 0.7 });
+    expect(item(rendered.container, 'T-0000').textContent).toContain('Task 0 updated');
+    rendered.rerender(<Graph nodes={nodes} edges={edges} scope="second" />);
+    await waitFor(() => expect(controller.getCamera()).toEqual(fitted));
   });
 
-  it('retains painted geometry while culling content and keyboard access outside the viewport', () => {
+  it('culls offscreen nodes from the DOM and keeps the pinned selection mounted', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 800, height: 400 });
     const nodes = Array.from({ length: 30 }, (_, index) => node(index));
-    const rendered = render(
-      <section data-route-kind="planning.graph">
-        <DependencyGraph nodes={nodes} edges={[]} />
-      </section>,
-    );
-    keyboard(rendered.container);
-    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
-    viewport(figure);
-    const first = required(
-      rendered.container.querySelector<HTMLElement>('[data-keyboard-item="SPEC-A/T-0000"]'),
-    );
-    const canvas = required(rendered.container.querySelector<HTMLElement>('.pc-graph__canvas'));
-    const geometry = [first.style.left, first.style.top, first.style.width, first.style.height];
-    const canvasGeometry = canvas.style.cssText;
-    figure.scrollTop = 2000;
-    fireEvent.scroll(figure);
-    expect(first.isConnected).toBe(true);
-    expect([first.style.left, first.style.top, first.style.width, first.style.height]).toEqual(
-      geometry,
-    );
-    expect(first.style.visibility).toBe('hidden');
-    expect(first.getAttribute('aria-hidden')).toBe('true');
-    expect(first.hasAttribute('inert')).toBe(true);
-    expect(first.tabIndex).toBe(-1);
-    expect(first.textContent).toBe('');
-    expect(canvas.style.cssText).toBe(canvasGeometry);
-    fireEvent.keyDown(document.body, { key: 'j' });
-    expect(document.activeElement).not.toBe(first);
-    expect(document.activeElement?.hasAttribute('aria-hidden')).toBe(false);
-    figure.scrollTop = 0;
-    fireEvent.scroll(figure);
-    expect(first.style.visibility).toBe('');
-    expect(first.hasAttribute('inert')).toBe(false);
-    expect(first.textContent).toContain('Task 0');
+    const rendered = render(<Graph nodes={nodes} edges={[]} selectedId="T-0000" />);
+    await settleFrames();
+    const controller = liveController(created);
+    act(() => controller.setCamera({ x: 0, y: 0, zoom: 1 }));
+    await settleFrames();
+    expect(rendered.container.querySelector('[data-keyboard-item="T-0029"]')).toBeNull();
+    act(() => controller.setCamera({ x: 0, y: 2400, zoom: 1 }));
+    await settleFrames();
+    expect(rendered.container.querySelector('[data-keyboard-item="T-0029"]')).not.toBeNull();
+    expect(rendered.container.querySelector('[data-keyboard-item="T-0001"]')).toBeNull();
+    const selected = item(rendered.container, 'T-0000');
+    expect(selected.getAttribute('aria-pressed')).toBe('true');
+    expect(rendered.container.querySelectorAll('.pc-graph-node').length).toBeLessThan(30);
   });
 
-  it('zooms the actual canvas, fits its bounds and pans through keyboard-operable controls', () => {
-    const nodes = Array.from({ length: 20 }, (_, index) => node(index));
-    const rendered = render(<DependencyGraph nodes={nodes} edges={[]} height={400} />);
-    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
-    viewport(figure);
-    const content = required(rendered.container.querySelector<HTMLElement>('.pc-graph__content'));
-    const canvas = required(rendered.container.querySelector<HTMLElement>('.pc-graph__canvas'));
-    expect(content.style.transform).toBe('scale(1)');
-    fireEvent.click(rendered.getByRole('button', { name: 'Zoom in', exact: true }));
-    expect(content.style.transform).toBe('scale(1.1)');
-    expect(Number.parseFloat(canvas.style.height)).toBeGreaterThan(
-      Number.parseFloat(content.style.height),
-    );
-    flushFrames();
-    fireEvent.click(rendered.getByRole('button', { name: 'Pan down', exact: true }));
-    expect(figure.scrollTop).toBeGreaterThan(0);
-    fireEvent.click(rendered.getByRole('button', { name: 'Fit graph', exact: true }));
-    expect(figure.scrollTop).toBe(0);
-    expect(Number.parseFloat(canvas.style.height)).toBeLessThanOrEqual(400);
-    expect(rendered.getByLabelText('Graph zoom').textContent).not.toBe('100%');
-    for (let index = 0; index < 25; index += 1) {
-      fireEvent.click(rendered.getByRole('button', { name: 'Zoom in', exact: true }));
-    }
-    const zoomIn = rendered.getByRole('button', {
-      name: 'Zoom in',
-      exact: true,
-    }) as HTMLButtonElement;
-    expect(zoomIn.disabled).toBe(true);
-    expect(zoomIn.getAttribute('aria-disabled')).toBe('true');
-    expect(zoomIn.title).toBe('Maximum zoom reached');
+  it('zooms at the pointer over a card within 0.0001 and 2 and pans from the keyboard', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1000, height: 600 });
+    const { nodes, edges } = chain(6);
+    const rendered = render(<Graph nodes={nodes} edges={edges} />);
+    await settleFrames();
+    const controller = liveController(created);
+    const before = controller.getCamera().zoom;
+    fireEvent.wheel(item(rendered.container, 'T-0000'), {
+      deltaY: -40,
+      ctrlKey: true,
+      clientX: 200,
+      clientY: 120,
+    });
+    await settleFrames(2);
+    expect(controller.getCamera().zoom).toBeGreaterThan(before);
+    for (let index = 0; index < 40; index += 1) act(() => controller.zoomAt(1.25));
+    expect(controller.getCamera().zoom).toBe(2);
+    for (let index = 0; index < 80; index += 1) act(() => controller.zoomAt(0.5));
+    expect(controller.getCamera().zoom).toBe(0.0001);
+    const stage = rendered.getByRole('group', { name: 'Dependency graph' });
+    act(() => controller.setCamera({ x: 0, y: 0, zoom: 1 }));
+    act(() => stage.focus());
+    fireEvent.keyDown(stage, { key: 'ArrowDown', shiftKey: true });
+    expect(controller.getCamera().y).toBeGreaterThan(0);
   });
 
-  it('uses the minimap to move the viewport and its keyboard activation to reveal selection', () => {
-    const nodes = Array.from({ length: 30 }, (_, index) => node(index));
+  it('centres the stage on the clicked minimap point and reveals the selection from the keyboard', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1000, height: 600 });
+    chromeSlot('panel');
+    const { nodes, edges } = chain(30);
     const rendered = render(
-      <DependencyGraph nodes={nodes} edges={[]} selectedId={nodes[29]?.canonicalId} />,
+      <ChromeProvider>
+        <Graph nodes={nodes} edges={edges} selectedId="T-0029" />
+      </ChromeProvider>,
     );
-    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
-    viewport(figure);
+    await settleFrames();
+    const controller = liveController(created);
     const minimap = rendered.getByRole('button', { name: 'Graph minimap, center viewport' });
-    vi.spyOn(minimap, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 148,
-      height: 88,
-    } as DOMRect);
-    fireEvent.click(minimap, { detail: 1, clientX: 74, clientY: 70 });
-    expect(figure.scrollTop).toBeGreaterThan(1000);
-    fireEvent.click(minimap, { detail: 0 });
-    const selected = required(
-      rendered.container.querySelector<HTMLElement>('[data-keyboard-item="SPEC-A/T-0029"]'),
+    const canvas = required(minimap.querySelector('canvas'));
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(500, 400, 200, 120));
+    const transform = drawMinimap(
+      required(document.createElement('canvas').getContext('2d')),
+      {
+        nodes: graphCanvasModel(graphLayout(nodes, edges, 'source-to-target')).nodes,
+        edges: [],
+        selection: [],
+        style: () => ({ fill: '#000', stroke: '#000' }),
+        viewport: { x: 0, y: 0, width: 0, height: 0 },
+      },
+      { width: 200, height: 120, devicePixelRatio: 1 },
     );
-    expect(figure.scrollTop).toBe(Number(selected.dataset.y) + 33 - 200);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+    fireEvent.click(minimap, { detail: 1, clientX: 600, clientY: 470 });
+    const centre = controller.screenToWorld({ x: 500, y: 300 });
+    const expected = {
+      x: (100 - transform.offsetX) / transform.scale,
+      y: (70 - transform.offsetY) / transform.scale,
+    };
+    const zoom = controller.getCamera().zoom;
+    expect(Math.abs(centre.x - expected.x) * zoom).toBeLessThanOrEqual(2);
+    expect(Math.abs(centre.y - expected.y) * zoom).toBeLessThanOrEqual(2);
+    fireEvent.click(minimap, { detail: 0 });
+    await settleFrames();
+    const safe = controller.getSafeArea();
+    const selected = graphCanvasModel(graphLayout(nodes, edges, 'source-to-target')).nodes.find(
+      (entry) => entry.id === 'T-0029',
+    );
+    const middle = controller.worldToScreen({
+      x: required(selected).bounds.x + 115,
+      y: required(selected).bounds.y + 33,
+    });
+    expect(Math.abs(middle.x - (safe.x + safe.width / 2))).toBeLessThanOrEqual(2);
+    expect(Math.abs(middle.y - (safe.y + safe.height / 2))).toBeLessThanOrEqual(2);
   });
 
-  it('retains connected offscreen neighbours for canonical arrow navigation through a cycle', () => {
+  it('dispatches each arrow once through the engine along connected neighbours and a cycle', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1000, height: 600 });
     const nodes = Array.from({ length: 18 }, (_, index) => node(index));
-    const edges: GraphEdge[] = nodes
-      .slice(1, 16)
-      .map((item, index) => ({ from: required(nodes[index]).id, to: item.id, kind: 'depends_on' }));
+    const edges: GraphEdge[] = nodes.slice(1, 16).map((entry, index) => ({
+      from: required(nodes[index]).id,
+      to: entry.id,
+      kind: 'depends_on',
+    }));
     edges.push({ from: required(nodes[16]).id, to: required(nodes[17]).id, kind: 'depends_on' });
     edges.push({ from: required(nodes[17]).id, to: required(nodes[16]).id, kind: 'depends_on' });
-    const rendered = render(
-      <section data-route-kind="planning.graph">
-        <DependencyGraph nodes={nodes} edges={edges} />
-      </section>,
-    );
+    const rendered = render(<Graph nodes={nodes} edges={edges} />);
     const announce = keyboard(rendered.container);
-    expect(rendered.container.querySelectorAll('.pc-graph-node').length).toBeLessThan(nodes.length);
-    const item = (index: number) =>
-      required(
-        rendered.container.querySelector<HTMLElement>(
-          `[data-keyboard-item="${required(nodes[index]).canonicalId}"]`,
-        ),
-      );
-    act(() => item(0).focus());
+    await settleFrames();
+    const controller = liveController(created);
+    const handled = vi.spyOn(controller, 'handleKey');
+    const moves: (string | null)[] = [];
+    controller.on('focus', (id) => moves.push(id));
+    await act(() => controller.focusNode('T-0000'));
+    moves.length = 0;
     for (let index = 0; index < 15; index += 1) {
-      expect(item(index + 1)).toBeTruthy();
       const current = required(document.activeElement);
       fireEvent.keyDown(current, { key: 'ArrowRight' });
-      expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe(
-        required(nodes[index + 1]).canonicalId,
+      await waitFor(() =>
+        expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe(
+          required(nodes[index + 1]).id,
+        ),
       );
     }
-    act(() => item(16).focus());
-    fireEvent.keyDown(item(16), { key: 'ArrowDown' });
-    expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe(
-      required(nodes[17]).canonicalId,
+    expect(moves).toHaveLength(15);
+    // The coordinator forwards once; the engine's own stage listener sees the event consumed.
+    expect(handled.mock.results.filter((result) => result.value === true)).toHaveLength(15);
+    expect(announce).not.toHaveBeenCalled();
+    fireEvent.keyDown(required(document.activeElement), { key: 'ArrowRight' });
+    await waitFor(() => expect(rendered.getByRole('status').textContent).toBe('Edge of canvas'));
+    await act(() => controller.focusNode('T-0016'));
+    fireEvent.keyDown(item(rendered.container, 'T-0016'), { key: 'ArrowDown' });
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe('T-0017'),
     );
-    expect(announce).not.toHaveBeenCalledWith(expect.stringMatching(/no connected/i));
   });
 
-  it('reveals the focused node using the scoped layout committed during the focus event', () => {
+  it('fits a graph-focus node into the scoped layout committed during the event', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1000, height: 600 });
     const nodes = Array.from({ length: 20 }, (_, index) => node(index));
     const selected = required(nodes[19]);
     function Scope() {
@@ -379,63 +366,76 @@ describe('dependency graph navigation', () => {
       }, []);
       return (
         <section ref={root} data-route-kind="planning.graph">
-          <DependencyGraph nodes={visible} edges={[]} selectedId={selected.canonicalId} />
+          <GraphCanvas
+            nodes={visible}
+            edges={[]}
+            flow="source-to-target"
+            scope={String(visible.length)}
+            selectedId={selected.id}
+            onSelect={() => undefined}
+            onFocusSelect={() => undefined}
+          />
         </section>
       );
     }
     const rendered = render(<Scope />);
-    keyboard(rendered.container);
-    const figure = rendered.getByRole('figure', { name: 'Dependency graph' });
-    viewport(figure);
-    const current = required(
-      rendered.container.querySelector<HTMLElement>(
-        `[data-keyboard-item="${selected.canonicalId}"]`,
-      ),
+    await settleFrames();
+    const controller = liveController(created);
+    await act(() => controller.focusNode(selected.id));
+    fireEvent(
+      item(rendered.container, selected.id),
+      new CustomEvent('graph-focus', { bubbles: true, detail: { id: selected.id } }),
     );
-    act(() => current.focus());
-    fireEvent.keyDown(current, { key: 'f' });
-    flushFrames();
+    await settleFrames();
     expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(1);
-    expect(figure.scrollTop).toBe(0);
+    const camera = controller.getCamera();
+    expect(camera.zoom).toBe(1);
+    const safe = controller.getSafeArea();
+    const middle = controller.worldToScreen({ x: 48 + 115, y: 62 + 33 });
+    expect(Math.abs(middle.x - (safe.x + safe.width / 2))).toBeLessThanOrEqual(1);
+    expect(Math.abs(middle.y - (safe.y + safe.height / 2))).toBeLessThanOrEqual(1);
   });
 
-  it('keeps every node and relationship reachable in the cycle-safe structural list', () => {
+  it('keeps every node and relationship reachable in the cycle-safe Outline', async () => {
+    stubStageSize({ width: 1000, height: 600 });
+    const outline = chromeSlot('outline');
     const nodes = [node(0), node(1)];
     const edges = [
       { from: required(nodes[0]).id, to: required(nodes[1]).id },
       { from: required(nodes[1]).id, to: required(nodes[0]).id },
     ];
-    const select = vi.fn();
-    const rendered = render(
-      <DependencyGraph nodes={nodes} edges={edges} view="outline" onSelect={select} />,
-    );
-    expect(rendered.container.querySelectorAll('[data-keyboard-item]')).toHaveLength(2);
-    expect(rendered.getByRole('region', { name: 'Graph structural list' }).textContent).toContain(
-      'depends on T-0000',
-    );
-    fireEvent.click(rendered.getByRole('button', { name: /Task 1/u }));
-    expect(select).toHaveBeenCalledWith(required(nodes[1]).id);
+    const focusSelect = vi.fn();
+    render(<Graph nodes={nodes} edges={edges} onFocusSelect={focusSelect} />);
+    await settleFrames();
+    const options = outline.querySelectorAll<HTMLElement>('[role="option"]');
+    expect(options).toHaveLength(2);
+    expect(outline.textContent).toContain('depends on T-0000');
+    act(() => required(options[1]).focus());
+    fireEvent.keyDown(required(options[1]), { key: 'Enter' });
+    await waitFor(() => expect(focusSelect).toHaveBeenCalledWith(required(nodes[1]).id));
+    expect(document.activeElement?.getAttribute('data-keyboard-item')).toBe(required(nodes[1]).id);
   });
 
-  it('keeps source relationship statements intact when prerequisites are laid out first', () => {
+  it('keeps source relationship statements intact when prerequisites are laid out first', async () => {
+    stubStageSize({ width: 1000, height: 600 });
+    const outline = chromeSlot('outline');
     const nodes = [node(0), node(1)];
     const edges = [{ from: required(nodes[0]).id, to: required(nodes[1]).id, kind: 'depends_on' }];
-    const rendered = render(
-      <DependencyGraph nodes={nodes} edges={edges} flow="target-to-source" view="outline" />,
-    );
-    const dependent = rendered.getByRole('button', { name: /Task 0/u }).closest('li');
-    const prerequisite = rendered.getByRole('button', { name: /Task 1/u }).closest('li');
+    render(<Graph nodes={nodes} edges={edges} flow="target-to-source" />);
+    await settleFrames();
+    const [dependent, prerequisite] = Array.from(
+      outline.querySelectorAll<HTMLElement>('[role="option"]'),
+    ).sort((left, right) => (left.textContent ?? '').localeCompare(right.textContent ?? ''));
     expect(dependent?.textContent).toContain('depends on T-0001');
     expect(prerequisite?.textContent).not.toContain('depends on T-0000');
   });
 
-  it('lays out the five-thousand-node depth tier without recursive stack overflow or full DOM admission', () => {
-    const nodes = Array.from({ length: 5000 }, (_, index) => node(index));
-    const edges = nodes
-      .slice(1)
-      .map((item, index) => ({ from: required(nodes[index]).id, to: item.id }));
-    const rendered = render(<DependencyGraph nodes={nodes} edges={edges} />);
+  it('lays out the five-thousand-node depth tier without recursive stack overflow or full DOM admission', async () => {
+    stubStageSize({ width: 1440, height: 900 });
+    const { nodes, edges } = chain(5000);
+    const rendered = render(<Graph nodes={nodes} edges={edges} />);
+    await settleFrames();
     expect(rendered.container.querySelectorAll('.pc-graph-node').length).toBeLessThan(20);
-    expect(rendered.container.querySelectorAll('.pc-graph__edge').length).toBeLessThan(20);
+    expect(rendered.container.querySelectorAll('.canvas-edges path').length).toBeLessThanOrEqual(6);
   });
 });

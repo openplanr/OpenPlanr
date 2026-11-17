@@ -55,6 +55,7 @@ import {
 } from '../../../../apps/dashboard/tests/helpers/redesign-parity-rows.mjs';
 import { installDashboardLayoutShifts } from '../dashboard/fixtures/dashboard-layout-shifts.js';
 import { ARTBOARD_FIXTURE_CLOCK } from '../dashboard/fixtures/premium-artboard-fixture.js';
+import { registerGraphCanvasBrowserTests } from './fixtures/dashboard-graph-canvas.js';
 import { registerDashboardPerformanceTraceTests } from './fixtures/dashboard-performance-trace.js';
 import {
   DASHBOARD_FIXTURE_CYCLE_ID,
@@ -65,6 +66,7 @@ import {
 import { SPRINT_SCENARIO_NOW } from './fixtures/dashboard-sprint-graph.js';
 
 registerDashboardPerformanceTraceTests();
+registerGraphCanvasBrowserTests((page, route, options) => openFixture(page, route, options));
 
 // The desktop parity canvases predate the floating chrome and drew a 64 px rail beside the
 // content, so their measurements use a viewport narrower by that rail.
@@ -196,7 +198,12 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
     await expect(page.locator('.pc-shell')).toBeVisible();
     await expect(page.locator('#main-content')).toBeVisible();
     const workspace = page.locator(`[data-route-kind="${expectation.kind}"]`);
-    await expect(workspace).toBeVisible();
+    // The Graph's content is its full-window canvas stage; the workspace keeps no box of its own.
+    await expect(
+      expectation.kind === 'planning.graph'
+        ? workspace.getByRole('group', { name: 'Dependency graph' })
+        : workspace,
+    ).toBeVisible();
     if (route === '#/search') {
       const palette = page.locator('dialog.pc-palette');
       await expect(palette).not.toBeVisible();
@@ -401,13 +408,12 @@ test.describe('dashboard real-browser quality', () => {
       }
       if (route === '#/graph') {
         const graph = page.locator('[data-route-kind="planning.graph"]');
-        await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
+        await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeAttached();
         await expect(graph).toContainText('1 of 1 nodes');
-        await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
-        await expect(graph.getByRole('tab', { name: 'Graph' })).toHaveAttribute(
-          'aria-selected',
-          'true',
+        await expect(page.locator('[aria-label="Graph focus"]')).toContainText(
+          'Everything outside the focus is hidden, not deleted.',
         );
+        await expect(graph.getByRole('group', { name: 'Dependency graph' })).toBeVisible();
         await expectGoldenScreenshot(page, 'console-planning-graph-ready.png');
       }
       if (route === '#/board') {
@@ -1085,14 +1091,25 @@ test.describe('dashboard real-browser quality', () => {
       await openFixture(page, '#/graph');
 
       const graph = page.locator('[data-route-kind="planning.graph"]');
-      await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
-      await expect(graph).toContainText('Everything outside the focus is hidden, not deleted.');
-      await expect(graph).toContainText('Arrows move to connected neighbours.');
+      await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeAttached();
+      const focus = page.locator('[aria-label="Graph focus"]');
+      await expect(focus).toContainText('Everything outside the focus is hidden, not deleted.');
+      await expect(focus).toContainText('Arrows move to connected neighbours.');
+      // The canvas fills the window with no scroll container and no scrollbars.
+      const stage = graph.getByRole('group', { name: 'Dependency graph' });
+      await expect(stage).toBeVisible();
+      expect(await stage.boundingBox()).toEqual(expect.objectContaining({ width: viewport.width }));
+      expect(await stage.evaluate((element) => getComputedStyle(element).overflow)).toBe('hidden');
+      expect(
+        await page
+          .locator('.pc-shell__scroll')
+          .evaluate((element) => element.scrollHeight <= element.clientHeight),
+      ).toBe(true);
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
-      if (viewport.width >= 1024) {
-        await expectSurfaceToUseRouteFrame(page, '[data-route-kind="planning.graph"]');
-      }
+      // Under floating chrome the stage is the whole window rather than the route frame.
+      if (viewport.width >= 600)
+        expect(await stage.boundingBox()).toEqual({ x: 0, y: 0, ...viewport });
 
       if (viewport.width === 1280) {
         await expectGoldenScreenshot(page, 'console-planning-graph-ready.png');
@@ -1108,7 +1125,7 @@ test.describe('dashboard real-browser quality', () => {
     await openFixture(page, '#/graph', { planningScenario: 'delivery' });
 
     const graph = page.locator('[data-route-kind="planning.graph"]');
-    await expect(graph.getByRole('button', { name: 'Dependencies', exact: true })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Dependencies', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
@@ -1422,8 +1439,8 @@ test.describe('dashboard real-browser quality', () => {
     });
 
     expect(transition).toEqual({ route: '#/graph', showedPlanningRefusal: false });
-    await expect(page.locator('[data-route-kind="planning.graph"]')).toBeVisible();
-    await expect(page.locator('[data-route-kind="planning.graph"]')).toContainText(
+    await expect(page.getByRole('group', { name: 'Dependency graph' })).toBeVisible();
+    await expect(page.locator('[aria-label="Graph focus"]')).toContainText(
       'Everything outside the focus is hidden, not deleted.',
     );
   });

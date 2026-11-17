@@ -45,36 +45,42 @@ const OUTSIDE_IGNORED = [
 const FOCUSABLE =
   'a[href], button, input, select, textarea, summary, [contenteditable], [tabindex]:not([tabindex="-1"])';
 
-/** Registers the skip link and main content as focus-cycle regions once both are mounted. */
+/**
+ * Registers the skip link and main content as focus-cycle regions once both are mounted.
+ * A mounted canvas stage registers itself in the main content's place.
+ */
 export function useChromeRegions(
   enabled: boolean,
   main: RefObject<HTMLElement | null>,
   skipLink: RefObject<HTMLAnchorElement | null>,
+  canvas: boolean,
 ): void {
   const { registerRegion } = useChrome();
   useLayoutEffect(() => {
-    const content = main.current;
     const skip = skipLink.current;
-    if (!enabled || !content || !skip) return;
-    const contentOff = registerRegion('canvas', content);
-    const skipOff = registerRegion('skip-link', skip);
-    return () => {
-      skipOff();
-      contentOff();
-    };
-  }, [enabled, main, skipLink, registerRegion]);
+    if (!enabled || !skip) return;
+    return registerRegion('skip-link', skip);
+  }, [enabled, skipLink, registerRegion]);
+  useLayoutEffect(() => {
+    const content = main.current;
+    if (!enabled || canvas || !content) return;
+    return registerRegion('canvas', content);
+  }, [enabled, canvas, main, registerRegion]);
 }
 
 /**
  * Page routes have no canvas stage, so the kit's empty-stage dismissal never fires there.
  * A press outside the chrome closes unpinned panels; rows reopen the sidebar themselves.
+ * Canvas routes leave dismissal and focus to the kit.
  */
 export function usePageChromeBehavior({
   routeKey,
   main,
+  canvas,
 }: Readonly<{
   routeKey: string;
   main: RefObject<HTMLElement | null>;
+  canvas: boolean;
 }>): void {
   const chrome = useChrome();
   const latest = useRef(chrome);
@@ -85,6 +91,7 @@ export function usePageChromeBehavior({
     closeUnpinned(latest.current);
   }, [routeKey]);
   useEffect(() => {
+    if (canvas) return;
     let closedByPress = false;
     const pointerdown = (event: PointerEvent) => {
       closedByPress =
@@ -129,7 +136,7 @@ export function usePageChromeBehavior({
       document.removeEventListener('mousedown', mousedown, true);
       document.removeEventListener('focusin', focusin);
     };
-  }, [main]);
+  }, [main, canvas]);
   useEffect(() => {
     if (chromeHidden && document.activeElement?.closest('.canvas-chrome-root'))
       main.current?.focus({ preventScroll: true });

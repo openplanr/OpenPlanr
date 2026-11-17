@@ -56,7 +56,7 @@ export const SHORTCUT_MAP = [
   ['1 / 2 / 3', 'Group the List by spec, status or type'],
   ['F on List', 'Focus the List filter'],
   ['D', 'Switch List density'],
-  ['F', 'Focus the selected Graph node'],
+  ['F', 'Fit the Graph selection into view'],
   ['Left/Right, Up/Down', 'Board columns/cards; Graph connected neighbours'],
   ['?', 'Open this shortcut help'],
   [
@@ -113,37 +113,11 @@ function items(root: HTMLElement): HTMLElement[] {
 
 function focusItem(item: HTMLElement, context: KeyboardContext): void {
   item.focus({ preventScroll: true });
-  item.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  // The canvas reveals its focused node; scrolling would offset the clipped stage.
+  if (!item.closest('.canvas-stage'))
+    item.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
   const rows = items(context.root);
   context.announce(`${rows.indexOf(item) + 1} of ${rows.length}`);
-}
-
-function graphNeighbour(
-  current: HTMLElement,
-  rows: HTMLElement[],
-  key: string,
-): HTMLElement | undefined {
-  const ids = (current.dataset.neighbours ?? '').split('\n');
-  const neighbours = rows.filter((row) => ids.includes(row.dataset.keyboardItem ?? ''));
-  const x = Number(current.dataset.x);
-  const y = Number(current.dataset.y);
-  if (key === 'ArrowLeft' || key === 'ArrowRight') {
-    const direction = key === 'ArrowLeft' ? -1 : 1;
-    return neighbours
-      .filter((row) => (Number(row.dataset.x) - x) * direction > 0)
-      .sort(
-        (a, b) =>
-          Math.hypot(Number(a.dataset.x) - x, Number(a.dataset.y) - y) -
-            Math.hypot(Number(b.dataset.x) - x, Number(b.dataset.y) - y) ||
-          (a.dataset.keyboardItem ?? '').localeCompare(b.dataset.keyboardItem ?? ''),
-      )[0];
-  }
-  const ordered = [...neighbours, current].sort(
-    (a, b) =>
-      Number(a.dataset.y) - Number(b.dataset.y) ||
-      (a.dataset.keyboardItem ?? '').localeCompare(b.dataset.keyboardItem ?? ''),
-  );
-  return ordered[ordered.indexOf(current) + (key === 'ArrowUp' ? -1 : 1)];
 }
 
 type CoordinatorState = {
@@ -163,6 +137,31 @@ type KeyStroke = Readonly<{
 }>;
 
 const INSPECTOR = '.canvas-chrome-sidebar, .pc-inspector-sheet:not([aria-modal="true"])';
+
+let canvasKeys: ((event: KeyboardEvent) => boolean) | null = null;
+
+/** Lets a mounted canvas take its stage keys before the coordinator's own bindings. */
+export function registerCanvasKeys(handle: (event: KeyboardEvent) => boolean): () => void {
+  canvasKeys = handle;
+  return () => {
+    if (canvasKeys === handle) canvasKeys = null;
+  };
+}
+
+// Enter and Escape stay with the coordinator so inspector and Esc precedence are unchanged.
+function canvasKey(stroke: KeyStroke): boolean {
+  const { event, target } = stroke;
+  if (
+    !canvasKeys ||
+    event.key === 'Escape' ||
+    event.key === 'Enter' ||
+    !target?.closest('.canvas-stage') ||
+    !canvasKeys(event)
+  )
+    return false;
+  event.stopPropagation();
+  return true;
+}
 const ARROWS = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'];
 
 function consume(event: KeyboardEvent): void {
@@ -363,20 +362,10 @@ function routeIs(context: KeyboardContext, route: string): boolean {
   return Boolean(context.root.querySelector(`[data-route-kind="planning.${route}"]`));
 }
 
-function focusGraph(stroke: KeyStroke, current: HTMLElement | undefined): void {
+function fitGraphSelection(stroke: KeyStroke, current: HTMLElement | undefined): void {
   consume(stroke.event);
-  if (!current) {
-    stroke.context.announce('Select a Graph node to focus.');
-    return;
-  }
-  current.dispatchEvent(
-    new CustomEvent('graph-focus', {
-      bubbles: true,
-      detail: { id: current.dataset.canonicalId || current.dataset.keyboardItem },
-    }),
-  );
-  current.focus();
-  current.scrollIntoView?.({ block: 'center', inline: 'center', behavior: 'instant' });
+  if (!current || !runRouteTool('graph.fit'))
+    stroke.context.announce('Select a Graph node to fit.');
 }
 
 function toggleGroup(stroke: KeyStroke, current: HTMLElement | undefined): void {
@@ -422,7 +411,7 @@ function viewShortcut(
   current: HTMLElement | undefined,
 ): boolean {
   if (stroke.key === 'f' && routeIs(stroke.context, 'graph')) {
-    focusGraph(stroke, current);
+    fitGraphSelection(stroke, current);
     return true;
   }
   if (routeIs(stroke.context, 'list')) {
@@ -472,8 +461,6 @@ function nextItem(
   current: HTMLElement | undefined,
 ): HTMLElement | undefined {
   const { event, key, context } = stroke;
-  if (current?.dataset.neighbours !== undefined && event.key.startsWith('Arrow'))
-    return graphNeighbour(current, rows, event.key);
   const horizontal = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
   if (current?.closest('[data-keyboard-column]') && horizontal)
     return boardNeighbour(context, current, event.key);
@@ -588,6 +575,10 @@ export function installKeyboardCoordinator(
       command: event.metaKey || event.ctrlKey,
     };
     if (skipShortcut(stroke, state, document)) {
+      state.goAt = null;
+      return;
+    }
+    if (canvasKey(stroke)) {
       state.goAt = null;
       return;
     }

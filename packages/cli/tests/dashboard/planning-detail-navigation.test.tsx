@@ -29,6 +29,7 @@ import {
 } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
 import { deliveryPlanningGraph } from '../e2e/fixtures/dashboard-delivery-graph.js';
 import { findDetailReady } from './detail-ready.js';
+import { settleFrames, stubStageSize } from './fixtures/graph-canvas-harness.js';
 import { fixtureSnapshot } from './fixtures/premium-dashboard-fixtures.js';
 
 const sourceView: PlanningView = {
@@ -552,18 +553,7 @@ describe('Planning detail shell navigation', () => {
 
   function pendingFocusShell(href: string, graph?: PlanningGraph) {
     vi.stubGlobal('innerWidth', 1440);
-    if (graph) {
-      vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (
-        this: Element,
-      ) {
-        return this.classList.contains('pc-graph') ? 1000 : 0;
-      });
-      vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (
-        this: Element,
-      ) {
-        return this.classList.contains('pc-graph') ? 600 : 0;
-      });
-    }
+    if (graph) stubStageSize({ width: 1000, height: 600 });
     const base = fixture();
     const snapshot = graph ? fixtureSnapshot(graph, base.binding) : base;
     const pending = new Map<string, () => void>();
@@ -649,12 +639,14 @@ describe('Planning detail shell navigation', () => {
     'keeps Graph QT-071 and its retarget focused and returns to the latest node through %s',
     async (method) => {
       const { user, view, complete } = pendingFocusShell('#/graph', focusGraph);
-      const controls = screen.getByRole('complementary', { name: 'Graph controls' });
+      await settleFrames();
+      const controls = screen.getByRole('region', { name: 'Graph focus' });
+      expect(controls.closest('.canvas-chrome-navigation')).toBeTruthy();
       expect(
         within(controls)
           .getAllByRole('heading', { level: 2 })
           .map((heading) => heading.textContent),
-      ).toEqual(['Focus', 'Show', 'Edges']);
+      ).toEqual(['Focus', 'Edges']);
       const initial = graphNode(view.container, 'QT-071');
       await user.click(initial);
       expect(initial.getAttribute('aria-pressed')).toBe('true');
@@ -688,12 +680,17 @@ describe('Planning detail shell navigation', () => {
         route === 'Graph' ? '#/graph' : sourceHref,
         route === 'Graph' ? focusGraph : undefined,
       );
+      if (route === 'Graph') await settleFrames();
       const owner =
         route === 'Graph' ? graphNode(view.container, 'QT-071') : rows(view.container)[0];
       const id = route === 'Graph' ? 'QT-071' : taskIds[0];
       await user.click(owner);
       await complete(id);
-      const background = screen.getByRole('main');
+      // Pages close panels from any blank press; the Graph leaves it to the kit's empty-stage press.
+      const background =
+        route === 'Graph'
+          ? screen.getByRole('group', { name: 'Dependency graph' })
+          : screen.getByRole('main');
       await user.click(background);
       await settleInspectorDismissal();
       expect(screen.queryByRole('region', { name: 'Inspector', exact: true })).toBeNull();

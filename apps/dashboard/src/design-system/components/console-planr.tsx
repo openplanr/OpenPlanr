@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   ArtifactTag,
   type ArtifactType,
@@ -8,14 +8,13 @@ import {
 } from './artifact-recipes.js';
 import { Badge, type BadgeTone, CommandHint } from './console-core.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
-import { Tooltip } from './tooltip.js';
 import './planr-console.css';
 
 /**
  * Planr-domain console components: artifact-status dots, governed-action and execution-result
  * badges, work-item and capability labels, the read-only governed action card, the dependency
- * graph with its outline view, sprint progress and page helpers.
- * Entry points: `WorkItemChip`, `ArtifactStatus`, `StateBadge`, `DependencyGraph`, `Absent`.
+ * graph layout and card content, sprint progress and page helpers.
+ * Entry points: `WorkItemChip`, `ArtifactStatus`, `StateBadge`, `graphLayout`, `Absent`.
  */
 
 // ---------------------------------------------------------------- ArtifactStatus
@@ -459,7 +458,7 @@ export function GovernedActionCard({
   );
 }
 
-// ---------------------------------------------------------------- DependencyGraph
+// ---------------------------------------------------------------- Dependency graph layout
 
 export type GraphNode = Readonly<{
   id: string;
@@ -478,18 +477,6 @@ export type GraphEdge = Readonly<{
   kind?: string;
 }>;
 
-export type DependencyGraphProps = Readonly<{
-  nodes: readonly GraphNode[];
-  edges: readonly GraphEdge[];
-  view?: 'graph' | 'outline';
-  flow?: 'source-to-target' | 'target-to-source';
-  focusedIds?: ReadonlySet<string>;
-  selectedId?: string | null;
-  onSelect?: (id: string) => void;
-  onFocusSelect?: (id: string) => void;
-  height?: number;
-}>;
-
 const GRAPH_TYPE_ORDER = [
   'epic',
   'feature',
@@ -501,11 +488,11 @@ const GRAPH_TYPE_ORDER = [
   'quick',
   'sprint',
 ];
-const GRAPH_COL_W = 294;
+/** Horizontal pitch between dependency stages in world pixels. */
+export const GRAPH_COL_W = 294;
 const GRAPH_ROW_H = 94;
-const GRAPH_NODE_W = 230;
-const GRAPH_NODE_H = 66;
-const GRAPH_MIN_ZOOM = 0.0001;
+export const GRAPH_NODE_W = 230;
+export const GRAPH_NODE_H = 66;
 
 function graphNodeOrder(left: GraphNode, right: GraphNode): number {
   const leftType = GRAPH_TYPE_ORDER.indexOf(left.type);
@@ -687,7 +674,7 @@ function orderDependencyColumns(
 }
 
 type GraphPoint = Readonly<{ x: number; y: number }>;
-type GraphLayout = Readonly<{
+export type GraphLayout = Readonly<{
   byId: ReadonlyMap<string, GraphNode>;
   displayId: ReadonlyMap<string, string>;
   neighbours: ReadonlyMap<string, readonly string[]>;
@@ -697,7 +684,6 @@ type GraphLayout = Readonly<{
   position: ReadonlyMap<string, GraphPoint>;
   width: number;
   height: number;
-  minimap: string;
   tracedIds: ReadonlySet<string>;
 }>;
 
@@ -707,7 +693,8 @@ const graphLayouts = new WeakMap<
   WeakMap<readonly GraphEdge[], Map<string, GraphLayout>>
 >();
 
-function graphLayout(
+/** Ranked world layout for a graph and flow, cached by the immutable input arrays. */
+export function graphLayout(
   nodes: readonly GraphNode[],
   edges: readonly GraphEdge[],
   flow: 'source-to-target' | 'target-to-source',
@@ -768,9 +755,6 @@ function graphLayout(
       position.set(node.id, { x, y: top + index * GRAPH_ROW_H });
     });
   });
-  const minimap = [...position.values()]
-    .map(({ x, y }) => `M${x},${y}h${GRAPH_NODE_W}v${GRAPH_NODE_H}h-${GRAPH_NODE_W}z`)
-    .join('');
   const layout: GraphLayout = {
     byId,
     displayId,
@@ -781,7 +765,6 @@ function graphLayout(
     position,
     width,
     height,
-    minimap,
     tracedIds: new Set(
       presentationEdges.filter((edge) => edge.active).flatMap((edge) => [edge.from, edge.to]),
     ),
@@ -808,7 +791,14 @@ function graphArtifactType(type: string): ArtifactType | undefined {
   return mapped[type];
 }
 
-function GraphNodeContent({ node }: Readonly<{ node: GraphNode }>) {
+/** Status for assistive technology; the visible status glyph is decorative. */
+export function graphNodeDescription(node: GraphNode): string | undefined {
+  if (node.status) return ARTIFACT_LABEL[node.status] ?? node.status;
+  return node.blocked ? 'Blocked' : undefined;
+}
+
+/** The ID tag, status glyph and title shown inside a graph card. */
+export function GraphNodeContent({ node }: Readonly<{ node: GraphNode }>) {
   const type = graphArtifactType(node.type);
   return (
     <>
@@ -833,430 +823,6 @@ function GraphNodeContent({ node }: Readonly<{ node: GraphNode }>) {
       </span>
       <span className="pc-graph-node__label">{node.label}</span>
     </>
-  );
-}
-
-/** A read-only dependency canvas with a complete structural list for non-visual navigation. */
-export function DependencyGraph({
-  nodes,
-  edges,
-  view = 'graph',
-  flow = 'source-to-target',
-  focusedIds,
-  selectedId,
-  onSelect,
-  onFocusSelect,
-  height = 520,
-}: DependencyGraphProps) {
-  const layout = useMemo(() => graphLayout(nodes, edges, flow), [nodes, edges, flow]);
-  const figureRef = useRef<HTMLElement>(null);
-  const [zoom, setZoom] = useState(1);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const [viewport, setViewport] = useState({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-    measured: false,
-  });
-  const admittedIds = useMemo(() => ({ layout, ids: new Set<string>() }), [layout]).ids;
-  const readViewport = useCallback(() => {
-    const figure = figureRef.current;
-    if (!figure) return;
-    const width = figure.clientWidth;
-    const viewportHeight = figure.clientHeight;
-    if (width <= 0 || viewportHeight <= 0) return;
-    const next = {
-      left: figure.scrollLeft,
-      top: figure.scrollTop,
-      width,
-      height: viewportHeight,
-      measured: true,
-    };
-    setViewport((current) =>
-      Object.keys(next).every(
-        (key) => current[key as keyof typeof next] === next[key as keyof typeof next],
-      )
-        ? current
-        : next,
-    );
-  }, []);
-  const measureCanvas = useCallback(() => {
-    readViewport();
-    const figure = figureRef.current;
-    if (!figure || figure.clientWidth <= 0 || figure.clientHeight <= 0) return;
-    const next = { width: figure.clientWidth, height: figure.clientHeight };
-    setCanvasSize((current) =>
-      current.width === next.width && current.height === next.height ? current : next,
-    );
-  }, [readViewport]);
-  useLayoutEffect(() => {
-    if (view !== 'graph') return;
-    measureCanvas();
-    const figure = figureRef.current;
-    if (!figure || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measureCanvas);
-    // Scrollbars from manual zoom must not turn into a new automatic fit.
-    observer.observe(figure, { box: 'border-box' });
-    return () => observer.disconnect();
-  }, [measureCanvas, view]);
-  const moveCamera = useCallback(
-    (left: number, top: number) => {
-      const figure = figureRef.current;
-      if (!figure) return;
-      figure.scrollLeft = Math.max(0, left);
-      figure.scrollTop = Math.max(0, top);
-      readViewport();
-    },
-    [readViewport],
-  );
-  const reveal = useCallback(
-    (id: string) => {
-      const display = layout.displayId.get(id) ?? id;
-      const point = layout.position.get(display);
-      const figure = figureRef.current;
-      if (!point || !figure) return;
-      moveCamera(
-        (point.x + GRAPH_NODE_W / 2) * zoom - figure.clientWidth / 2,
-        (point.y + GRAPH_NODE_H / 2) * zoom - figure.clientHeight / 2,
-      );
-    },
-    [layout, zoom, moveCamera],
-  );
-  const revealRef = useRef(reveal);
-  useLayoutEffect(() => {
-    revealRef.current = reveal;
-  }, [reveal]);
-  useLayoutEffect(() => {
-    if (view !== 'graph') return;
-    const figure = figureRef.current;
-    if (!figure) return;
-    const focus = (event: Event) => {
-      const detail = (event as CustomEvent<{ id?: string } | string>).detail;
-      const id = typeof detail === 'string' ? detail : detail?.id;
-      if (!id) return;
-      reveal(id);
-      // The focus scope can change the layout in the same event dispatch.
-      requestAnimationFrame(() => revealRef.current(id));
-    };
-    figure.addEventListener('graph-focus', focus);
-    return () => figure.removeEventListener('graph-focus', focus);
-  }, [reveal, view]);
-  const zoomTo = (next: number) => {
-    const bounded = Math.max(GRAPH_MIN_ZOOM, Math.min(2, next));
-    const centerX = (viewport.left + viewport.width / 2) / zoom;
-    const centerY = (viewport.top + viewport.height / 2) / zoom;
-    setZoom(bounded);
-    requestAnimationFrame(() =>
-      moveCamera(centerX * bounded - viewport.width / 2, centerY * bounded - viewport.height / 2),
-    );
-  };
-  const fittedZoom = Math.max(
-    GRAPH_MIN_ZOOM,
-    Math.min(1, viewport.width / layout.width, viewport.height / layout.height),
-  );
-  const fittedCanvasZoom = Math.max(
-    GRAPH_MIN_ZOOM,
-    Math.min(1, canvasSize.width / layout.width, canvasSize.height / layout.height),
-  );
-  const focusScope = useMemo(
-    () => (focusedIds?.size ? JSON.stringify([...focusedIds].sort()) : null),
-    [focusedIds],
-  );
-  // Canvas resizes need a new fit; unchanged live geometry must preserve the camera.
-  useLayoutEffect(() => {
-    if (focusScope === null || view !== 'graph' || canvasSize.width <= 0 || canvasSize.height <= 0)
-      return;
-    setZoom(fittedCanvasZoom);
-    moveCamera(0, 0);
-  }, [focusScope, view, fittedCanvasZoom, canvasSize.width, canvasSize.height, moveCamera]);
-  const fit = () => {
-    setZoom(fittedZoom);
-    moveCamera(0, 0);
-  };
-  const selectedDisplayId = selectedId ? (layout.displayId.get(selectedId) ?? selectedId) : null;
-  const retained = new Set<string>();
-  for (const id of focusedIds ?? []) {
-    const displayId = layout.displayId.get(id) ?? id;
-    if (layout.position.has(displayId)) retained.add(displayId);
-  }
-  for (const id of [selectedDisplayId, focusedId]) {
-    if (!id) continue;
-    retained.add(id);
-    for (const neighbour of layout.neighbours.get(id) ?? []) retained.add(neighbour);
-  }
-  const margin = 150;
-  const bounds = {
-    left: viewport.left / zoom - margin,
-    top: viewport.top / zoom - margin,
-    right: (viewport.left + viewport.width) / zoom + margin,
-    bottom: (viewport.top + viewport.height) / zoom + margin,
-  };
-  const visibleIds = new Set<string>();
-  for (const [id, point] of layout.position) {
-    if (
-      viewport.measured &&
-      (retained.has(id) ||
-        (point.x + GRAPH_NODE_W >= bounds.left &&
-          point.x <= bounds.right &&
-          point.y + GRAPH_NODE_H >= bounds.top &&
-          point.y <= bounds.bottom))
-    )
-      visibleIds.add(id);
-  }
-  // Keeping admitted geometry avoids collapsing painted nodes when the viewport is refined.
-  for (const id of visibleIds) admittedIds.add(id);
-  if (view === 'outline')
-    return (
-      <section className="pc-graph-outline" aria-label="Graph structural list">
-        <ul className="pc-graph-outline__list">
-          {nodes.map((node) => (
-            <li key={node.id} className="pc-graph-outline__item">
-              <button
-                type="button"
-                className="pc-graph-outline__row"
-                data-keyboard-item={node.canonicalId ?? node.id}
-                data-canonical-id={node.canonicalId ?? node.id}
-                data-selected={selectedDisplayId === node.id || undefined}
-                aria-pressed={selectedDisplayId === node.id}
-                aria-description={
-                  node.status
-                    ? (ARTIFACT_LABEL[node.status] ?? node.status)
-                    : node.blocked
-                      ? 'Blocked'
-                      : undefined
-                }
-                onFocus={() => onFocusSelect?.(node.id)}
-                onClick={() => onSelect?.(node.id)}
-              >
-                <GraphNodeContent node={node} />
-              </button>
-              {layout.relationships.has(node.id) ? (
-                <p className="pc-graph-outline__relationships">
-                  {layout.relationships.get(node.id)?.join('; ')}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </section>
-    );
-  return (
-    <div className="pc-graph-workspace">
-      <fieldset className="pc-graph-controls" aria-label="Graph navigation">
-        <button
-          type="button"
-          aria-label="Zoom out"
-          disabled={zoom <= GRAPH_MIN_ZOOM}
-          aria-disabled={zoom <= GRAPH_MIN_ZOOM}
-          title={zoom <= GRAPH_MIN_ZOOM ? 'Minimum zoom reached' : 'Zoom out'}
-          onClick={() => zoomTo(zoom - 0.1)}
-        >
-          −
-        </button>
-        <output aria-live="polite" aria-label="Graph zoom">
-          {zoom < 0.01 ? (zoom * 100).toFixed(2) : Math.round(zoom * 100)}%
-        </output>
-        <button
-          type="button"
-          aria-label="Zoom in"
-          disabled={zoom >= 2}
-          aria-disabled={zoom >= 2}
-          title={zoom >= 2 ? 'Maximum zoom reached' : 'Zoom in'}
-          onClick={() => zoomTo(zoom + 0.1)}
-        >
-          +
-        </button>
-        <button type="button" onClick={fit}>
-          Fit graph
-        </button>
-        <button
-          type="button"
-          aria-label="Pan left"
-          onClick={() => moveCamera(viewport.left - 180, viewport.top)}
-        >
-          ←
-        </button>
-        <button
-          type="button"
-          aria-label="Pan up"
-          onClick={() => moveCamera(viewport.left, viewport.top - 180)}
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          aria-label="Pan down"
-          onClick={() => moveCamera(viewport.left, viewport.top + 180)}
-        >
-          ↓
-        </button>
-        <button
-          type="button"
-          aria-label="Pan right"
-          onClick={() => moveCamera(viewport.left + 180, viewport.top)}
-        >
-          →
-        </button>
-      </fieldset>
-      <figure
-        ref={figureRef}
-        className="pc-graph"
-        data-scroll-context="graph"
-        aria-label="Dependency graph"
-        data-tracing={layout.tracedIds.size > 0 || undefined}
-        style={{ height }}
-        onScroll={readViewport}
-      >
-        <div
-          className="pc-graph__canvas"
-          style={{ width: layout.width * zoom, height: layout.height * zoom }}
-        >
-          <div
-            className="pc-graph__content"
-            style={{ width: layout.width, height: layout.height, transform: `scale(${zoom})` }}
-          >
-            <div className="pc-graph__ranks" aria-hidden="true">
-              {layout.columns.map((column, rank) => (
-                <span
-                  key={column[0]?.id ?? 'empty'}
-                  className="pc-graph__rank"
-                  style={{ left: 48 + rank * GRAPH_COL_W + GRAPH_NODE_W / 2 }}
-                >
-                  {rank === 0 ? 'foundation' : `stage ${rank + 1}`} · {column.length}
-                </span>
-              ))}
-            </div>
-            <svg
-              className="pc-graph__edges"
-              viewBox={`0 0 ${layout.width} ${layout.height}`}
-              aria-hidden="true"
-            >
-              <title>Dependency edges</title>
-              {layout.edges.map((edge) => {
-                const from = layout.position.get(edge.from);
-                const to = layout.position.get(edge.to);
-                if (!viewport.measured || !from || !to) return null;
-                const connected = retained.has(edge.from) || retained.has(edge.to);
-                if (
-                  !connected &&
-                  (Math.max(from.x, to.x) + GRAPH_NODE_W < bounds.left ||
-                    Math.min(from.x, to.x) > bounds.right ||
-                    Math.max(from.y, to.y) + GRAPH_NODE_H < bounds.top ||
-                    Math.min(from.y, to.y) > bounds.bottom)
-                )
-                  return null;
-                const x1 = from.x + GRAPH_NODE_W;
-                const x2 = to.x;
-                const y1 = from.y + GRAPH_NODE_H / 2;
-                const y2 = to.y + GRAPH_NODE_H / 2;
-                const midX = (x1 + x2) / 2;
-                return (
-                  <path
-                    key={`${edge.kind ?? ''}-${edge.from}-${edge.to}`}
-                    className="pc-graph__edge"
-                    data-kind={edge.kind}
-                    data-blocked={edge.blocked || undefined}
-                    data-active={edge.active || undefined}
-                    d={`M${x1},${y1} C${midX},${y1} ${midX},${y2} ${x2},${y2}`}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                );
-              })}
-            </svg>
-            {nodes
-              .filter((node) => admittedIds.has(node.id))
-              .map((node) => {
-                const point = layout.position.get(node.id);
-                if (!point) return null;
-                const visible = visibleIds.has(node.id);
-                return (
-                  <Tooltip key={node.id} content={`${node.id}: ${node.label}`}>
-                    <button
-                      type="button"
-                      className="pc-graph-node"
-                      data-keyboard-item={node.canonicalId ?? node.id}
-                      data-canonical-id={node.canonicalId ?? node.id}
-                      data-x={point.x}
-                      data-y={point.y}
-                      data-neighbours={(layout.neighbours.get(node.id) ?? [])
-                        .map((id) => layout.byId.get(id)?.canonicalId ?? id)
-                        .join('\n')}
-                      data-selected={selectedDisplayId === node.id || undefined}
-                      aria-pressed={selectedDisplayId === node.id}
-                      aria-description={
-                        node.status
-                          ? (ARTIFACT_LABEL[node.status] ?? node.status)
-                          : node.blocked
-                            ? 'Blocked'
-                            : undefined
-                      }
-                      aria-hidden={!visible || undefined}
-                      inert={!visible}
-                      tabIndex={visible ? undefined : -1}
-                      data-related={layout.tracedIds.has(node.id) || undefined}
-                      data-blocked={node.blocked || undefined}
-                      data-dimmed={node.dimmed || undefined}
-                      style={{
-                        left: point.x,
-                        top: point.y,
-                        width: GRAPH_NODE_W,
-                        height: GRAPH_NODE_H,
-                        visibility: visible ? undefined : 'hidden',
-                      }}
-                      onClick={(event) => {
-                        event.currentTarget.focus({ preventScroll: true });
-                        onSelect?.(node.id);
-                      }}
-                      onFocus={() => {
-                        setFocusedId(node.id);
-                        onFocusSelect?.(node.id);
-                      }}
-                    >
-                      {visible ? <GraphNodeContent node={node} /> : null}
-                    </button>
-                  </Tooltip>
-                );
-              })}
-          </div>
-        </div>
-      </figure>
-      <button
-        type="button"
-        className="pc-graph-minimap"
-        aria-label="Graph minimap, center viewport"
-        onClick={(event) => {
-          const box = event.currentTarget.getBoundingClientRect();
-          if (event.detail === 0) {
-            if (selectedDisplayId) reveal(selectedDisplayId);
-            else fit();
-            return;
-          }
-          moveCamera(
-            ((event.clientX - box.left) / box.width) * layout.width * zoom - viewport.width / 2,
-            ((event.clientY - box.top) / box.height) * layout.height * zoom - viewport.height / 2,
-          );
-        }}
-      >
-        <svg
-          viewBox={`0 0 ${layout.width} ${layout.height}`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <title>Graph overview</title>
-          <path className="pc-graph-minimap__nodes" d={layout.minimap} />
-          <rect
-            className="pc-graph-minimap__viewport"
-            x={viewport.left / zoom}
-            y={viewport.top / zoom}
-            width={Math.min(layout.width, viewport.width / zoom)}
-            height={Math.min(layout.height, viewport.height / zoom)}
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      </button>
-    </div>
   );
 }
 

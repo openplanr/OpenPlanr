@@ -27,10 +27,14 @@ export type RouteTool = Readonly<{
   id: string;
   label: string;
   icon?: PcIconName;
+  /** Short visible text in place of an icon, such as an artifact prefix. */
+  glyph?: string;
   shortcut?: RouteToolShortcut;
   active?: boolean;
   /** Group tools share one menu in the compact tool pill. */
   group?: string;
+  /** Names the group in the compact tool pill; defaults to "Group by". */
+  groupLabel?: string;
   run: () => void;
 }>;
 
@@ -86,4 +90,69 @@ export function runRouteTool(id: string): boolean {
   if (!tool) return false;
   tool.run();
   return true;
+}
+
+/** Chrome places a route may render into: the left panel, the Outline tab and a phone minimap. */
+export type RouteSlotName = 'panel' | 'outline' | 'minimap';
+
+const slots = new Map<RouteSlotName, HTMLElement>();
+let canvasMounted = false;
+const slotListeners = new Set<() => void>();
+
+function notifySlots(): void {
+  for (const listener of slotListeners) listener();
+}
+
+function subscribeSlots(listener: () => void): () => void {
+  slotListeners.add(listener);
+  return () => {
+    slotListeners.delete(listener);
+  };
+}
+
+const slotRefs = new Map<RouteSlotName, (element: HTMLElement | null) => void>();
+
+/** Stable callback ref for a chrome element that hosts route content. */
+export function routeSlotRef(name: RouteSlotName): (element: HTMLElement | null) => void {
+  let ref = slotRefs.get(name);
+  if (!ref) {
+    ref = (element) => {
+      if (element) slots.set(name, element);
+      else if (slots.get(name)) slots.delete(name);
+      notifySlots();
+    };
+    slotRefs.set(name, ref);
+  }
+  return ref;
+}
+
+/** The mounted chrome element for a route slot, or null when the shell has none. */
+export function useRouteSlot(name: RouteSlotName): HTMLElement | null {
+  return useSyncExternalStore(
+    subscribeSlots,
+    () => slots.get(name) ?? null,
+    () => null,
+  );
+}
+
+/** Marks a canvas stage as mounted so the shell defers focus regions and dismissal to the kit. */
+export function usePublishCanvasRoute(mounted: boolean): void {
+  useEffect(() => {
+    if (!mounted) return;
+    canvasMounted = true;
+    notifySlots();
+    return () => {
+      canvasMounted = false;
+      notifySlots();
+    };
+  }, [mounted]);
+}
+
+/** True while a route renders a canvas stage. */
+export function useCanvasRoute(): boolean {
+  return useSyncExternalStore(
+    subscribeSlots,
+    () => canvasMounted,
+    () => false,
+  );
 }

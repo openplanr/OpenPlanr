@@ -13,6 +13,7 @@ import {
   PHONE_MAX_WIDTH,
   ShellChromeProvider,
   SIDEBAR_PANEL,
+  useCanvasRoute,
   useChrome,
   useChromeRegions,
   useCloseUnpinnedPanels,
@@ -202,10 +203,15 @@ function ShellFrame({
     sidebarWasOpen.current = sidebarOpen;
     const main = interactions.rootRef.current;
     const active = document.activeElement;
-    // Focus the user moved to a control, or to a visible chrome button, stays there.
+    // Focus the user moved to a control, or to a visible chrome button, stays there. The kit
+    // parks focus on a canvas stage, which stands in for the main content here.
     if (
       !closed ||
-      (active && active !== document.body && active !== main && !active.closest('[inert]'))
+      (active &&
+        active !== document.body &&
+        active !== main &&
+        !active.matches('.canvas-stage') &&
+        !active.closest('[inert]'))
     )
       return;
     const origin = Array.from(
@@ -261,7 +267,8 @@ function ShellFrame({
   const navigationInset =
     !phone && chrome.layout === 'desktop' && navigationPanel?.open && navigationPanel.pinned;
   const skipLink = useRef<HTMLAnchorElement>(null);
-  useChromeRegions(!phone, interactions.rootRef, skipLink);
+  const canvasRoute = useCanvasRoute();
+  useChromeRegions(!phone, interactions.rootRef, skipLink, canvasRoute);
   const planningInspector =
     planningModel && inspectorStore.selection?.kind === 'node' ? (
       <PlanningPresentationProvider

@@ -33,6 +33,7 @@ import {
   useInspectorStore,
 } from '../../../../apps/dashboard/src/features/shell/inspector-selection.js';
 import { installKeyboardCoordinator } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
+import { routeSlotRef } from '../../../../apps/dashboard/src/features/shell/route-tools.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 import {
   type DashboardProductState,
@@ -47,18 +48,18 @@ import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib
 import type { PlanningView } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
 import { deliveryPlanningGraph } from '../e2e/fixtures/dashboard-delivery-graph.js';
 import {
+  captureCanvasControllers,
+  liveController,
+  RouteToolProbe,
+  settleFrames,
+  stubStageSize,
+} from './fixtures/graph-canvas-harness.js';
+import {
   buildPremiumDashboardFixture,
   fixtureHash,
 } from './fixtures/premium-dashboard-fixtures.js';
 
-beforeEach(() => {
-  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
-    return this.classList.contains('pc-graph') ? 1000 : 0;
-  });
-  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
-    return this.classList.contains('pc-graph') ? 600 : 0;
-  });
-});
+beforeEach(() => stubStageSize({ width: 1000, height: 600 }));
 afterEach(() => vi.restoreAllMocks());
 
 const TEST_ROOT = dirname(fileURLToPath(import.meta.url));
@@ -264,7 +265,7 @@ describe('T-021 Planning workspace UI', () => {
     const graphHtml = renderToStaticMarkup(
       <GraphPage currentBinding={graphBinding} current={stateFor(graphBinding)} />,
     );
-    expect(graphHtml).toContain('Graph view');
+    expect(graphHtml).toContain('class="pc-graph-stage"');
     expect(graphHtml).toContain('3 of 4 nodes');
     expect(graphHtml).toContain('depends_on · 0');
     expect(graphHtml).not.toContain('Accessible planning graph');
@@ -448,65 +449,72 @@ describe('T-021 Planning workspace UI', () => {
 
   it('keeps graph and outline views keyboard-semantic and axe-clean', async () => {
     const current = identity('#/graph');
+    const outline = document.createElement('div');
+    document.body.append(outline);
+    act(() => routeSlotRef('outline')(outline));
     const rendered = render(
       <main>
+        <RouteToolProbe />
         <GraphPage currentBinding={current} current={stateFor(current)} />
       </main>,
     );
     try {
+      await settleFrames();
       expect(rendered.getByRole('button', { name: 'Lineage' }).getAttribute('aria-pressed')).toBe(
         'true',
       );
       expect(
         rendered.getByRole('switch', { name: /^contains/u }).getAttribute('aria-checked'),
       ).toBe('true');
-      expect(rendered.getByRole('figure', { name: 'Dependency graph' })).toBeTruthy();
+      expect(rendered.getByRole('group', { name: 'Dependency graph' })).toBeTruthy();
       expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(3);
-      expect(rendered.container.querySelectorAll('.pc-graph__edge')).toHaveLength(
-        graph.edges.length,
-      );
+      const drawn = [...rendered.container.querySelectorAll('.canvas-edges path')]
+        .map((path) => (path.getAttribute('d')?.match(/M/gu) ?? []).length)
+        .reduce((sum, count) => sum + count, 0);
+      expect(drawn).toBe(graph.edges.length);
       for (const node of graph.nodes.filter((node) => node.type !== 'sprint')) {
         expect(rendered.getByRole('button', { name: new RegExp(node.title) })).toBeTruthy();
       }
-      fireEvent.click(rendered.getByRole('tab', { name: /Outline/ }));
-      expect(rendered.container.querySelector('figure')).toBeNull();
-      const outline = rendered.container.querySelector('.pc-graph-outline');
-      expect(outline?.querySelectorAll('button')).toHaveLength(3);
-      expect(outline?.querySelectorAll('[data-keyboard-item]')).toHaveLength(3);
-      expect(outline?.textContent).toContain('Bound Planning transport');
+      const rows = outline.querySelectorAll('[role="option"]');
+      expect(rows).toHaveLength(3);
+      expect(outline.textContent).toContain('Bound Planning transport');
       expect(rendered.container.querySelectorAll('h1')).toHaveLength(1);
-      expect(
-        (
-          await axe.run(rendered.container, {
-            rules: { 'color-contrast': { enabled: false } },
-          })
-        ).violations,
-      ).toEqual([]);
+      for (const root of [rendered.container, outline])
+        expect(
+          (
+            await axe.run(root, {
+              rules: { 'color-contrast': { enabled: false } },
+            })
+          ).violations,
+        ).toEqual([]);
     } finally {
       rendered.unmount();
+      act(() => routeSlotRef('outline')(null));
+      outline.remove();
     }
   });
 
   it.each([1000, 656])(
     'keeps the delivery dependency component clickable in a %s px canvas',
-    (canvasWidth) => {
-      vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (
-        this: Element,
-      ) {
-        return this.classList.contains('pc-graph') ? canvasWidth : 0;
-      });
+    async (canvasWidth) => {
+      stubStageSize({ width: canvasWidth, height: 600 });
+      const created = captureCanvasControllers();
       clearInspector();
       const current = createDashboardQueryIdentity({
         ...identity('#/graph'),
         viewHash: sha256Jcs(deliveryPlanningGraph as never),
       });
       const rendered = render(
-        <GraphPage
-          currentBinding={current}
-          current={stateFor(current, envelope(current, deliveryPlanningGraph))}
-        />,
+        <>
+          <RouteToolProbe />
+          <GraphPage
+            currentBinding={current}
+            current={stateFor(current, envelope(current, deliveryPlanningGraph))}
+          />
+        </>,
       );
       try {
+        await settleFrames();
         expect(
           rendered
             .getByRole('button', { name: 'Dependencies', exact: true })
@@ -516,14 +524,16 @@ describe('T-021 Planning workspace UI', () => {
           name: 'QT-071 Make failed CRM registrations visible and replayable',
           exact: true,
         });
-        expect(task.getAttribute('aria-label')).toBeNull();
         expect(rendered.container.querySelectorAll('.pc-graph-node')).toHaveLength(4);
-        const canvas = rendered.container.querySelector<HTMLElement>('.pc-graph__canvas');
-        if (!canvas) throw new Error('Missing focused canvas.');
-        expect(Number.parseFloat(canvas.style.width)).toBeLessThanOrEqual(canvasWidth);
-        expect(
-          rendered.container.querySelectorAll('.pc-graph-node[aria-hidden="true"]'),
-        ).toHaveLength(0);
+        const controller = liveController(created);
+        const zoom = controller.getCamera().zoom;
+        for (const node of rendered.container.querySelectorAll<HTMLElement>('.pc-graph-node')) {
+          const [x = 0, y = 0] = (node.style.transform.match(/-?[\d.]+/gu) ?? []).map(Number);
+          const corner = controller.worldToScreen({ x, y });
+          expect(corner.x).toBeGreaterThanOrEqual(0);
+          expect(corner.y).toBeGreaterThanOrEqual(0);
+          expect(corner.x + 230 * zoom).toBeLessThanOrEqual(canvasWidth);
+        }
         fireEvent.click(task);
         expect(task.getAttribute('aria-pressed')).toBe('true');
         expect(
@@ -536,12 +546,19 @@ describe('T-021 Planning workspace UI', () => {
     },
   );
 
-  it('retains Graph focus, camera and canonical selection across an accepted live revision', () => {
+  it('retains Graph focus, camera and canonical selection across an accepted live revision', async () => {
     clearInspector();
+    const created = captureCanvasControllers();
     const current = identity('#/graph');
-    const rendered = render(<GraphPage currentBinding={current} current={stateFor(current)} />);
+    const rendered = render(
+      <>
+        <RouteToolProbe />
+        <GraphPage currentBinding={current} current={stateFor(current)} />
+      </>,
+    );
     try {
-      const node = rendered.container.querySelector<HTMLButtonElement>(
+      await settleFrames();
+      const node = rendered.container.querySelector<HTMLElement>(
         '[data-keyboard-item="SPEC-020/T-022"]',
       );
       if (!node) throw new Error('Missing focused task.');
@@ -553,10 +570,10 @@ describe('T-021 Planning workspace UI', () => {
       expect(
         rendered.container.querySelector('[data-graph-focus]')?.getAttribute('data-graph-focus'),
       ).toBe('SPEC-020/T-022');
-      const camera = rendered.getByRole('figure', { name: 'Dependency graph' });
-      camera.scrollTop = 240;
-      camera.scrollLeft = 120;
-      fireEvent.scroll(camera);
+      await settleFrames();
+      const controller = liveController(created);
+      act(() => controller.setCamera({ x: 120, y: 240, zoom: 0.9 }));
+      const stage = rendered.getByRole('group', { name: 'Dependency graph' });
       const changed = Object.freeze({
         ...graph,
         nodes: Object.freeze(
@@ -576,14 +593,18 @@ describe('T-021 Planning workspace UI', () => {
         viewHash: sha256Jcs(changed as never),
       });
       rendered.rerender(
-        <GraphPage
-          currentBinding={patchedBinding}
-          current={stateFor(patchedBinding, envelope(patchedBinding, changed))}
-        />,
+        <>
+          <RouteToolProbe />
+          <GraphPage
+            currentBinding={patchedBinding}
+            current={stateFor(patchedBinding, envelope(patchedBinding, changed))}
+          />
+        </>,
       );
-      expect(rendered.getByRole('figure', { name: 'Dependency graph' })).toBe(camera);
-      expect(camera.scrollTop).toBe(240);
-      expect(camera.scrollLeft).toBe(120);
+      await settleFrames(4);
+      expect(rendered.getByRole('group', { name: 'Dependency graph' })).toBe(stage);
+      expect(controller.getCamera()).toEqual({ x: 120, y: 240, zoom: 0.9 });
+      expect(created).toHaveLength(1);
       expect(document.activeElement).toBe(node);
       expect(node.getAttribute('aria-pressed')).toBe('true');
       expect(node.textContent).toContain('Updated bound transport');

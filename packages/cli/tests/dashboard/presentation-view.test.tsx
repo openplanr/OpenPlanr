@@ -19,6 +19,7 @@ import type { DashboardProductState } from '../../../../apps/dashboard/src/lib/a
 import type { DashboardQueryIdentity } from '../../../../apps/dashboard/src/lib/binding/query-identity.js';
 import { PlanningPresentationProvider } from '../../../../apps/dashboard/src/lib/routing/planning-presentation.js';
 import type { PlanningView } from '../../../../apps/dashboard/src/lib/routing/planning-view-codec.js';
+import { settleFrames, stubStageSize } from './fixtures/graph-canvas-harness.js';
 
 beforeEach(() => {
   vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
@@ -303,16 +304,18 @@ describe('presentation consumers', () => {
     ).toBe('compact');
   });
 
-  it('removes filtered Graph edges and retains the explicitly focused isolated node', () => {
+  it('removes filtered Graph edges and retains the explicitly focused isolated node', async () => {
+    stubStageSize({ width: 1000, height: 600 });
     const presentation = { ...view('graph', { priority: ['P0'] }), focusId: 'T-001' };
     render(wrap(presentation, <GraphPage currentBinding={binding} current={current} />));
+    await settleFrames();
     expect(screen.getByRole('heading', { name: 'Graph' })).toBeTruthy();
     expect(document.querySelectorAll('[data-keyboard-item]')).toHaveLength(1);
     expect(document.querySelector('[data-keyboard-item]')?.getAttribute('data-selected')).toBe(
       'true',
     );
     expect(document.body.textContent).toContain('1 of 4 nodes');
-    expect(document.querySelectorAll('.pc-graph__edge')).toHaveLength(0);
+    expect(document.querySelectorAll('.canvas-edges path')).toHaveLength(0);
     expect(document.body.textContent).not.toContain('Alpha transport');
   });
 

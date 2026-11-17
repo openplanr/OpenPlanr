@@ -1,5 +1,10 @@
 import { cpus, freemem, platform, release, totalmem } from 'node:os';
 import { performance } from 'node:perf_hooks';
+import {
+  type CanvasChromeMeasurement,
+  type CanvasChromeSnapshot,
+  evaluateCanvasTrace,
+} from '@openplanr/canvas/testing';
 import { expect, type Page, test } from '@playwright/test';
 import { installDashboardLayoutShifts } from '../../dashboard/fixtures/dashboard-layout-shifts.js';
 import {
@@ -13,12 +18,14 @@ import {
   rendererFrameWork,
   type SelectionSample,
   TRACE_PLAN,
+  traceBudgetPolicy,
 } from '../../dashboard/fixtures/dashboard-trace-model.js';
 import {
   buildPremiumDashboardFixture,
   FIXTURE_CLOCK,
   fixtureHash,
 } from '../../dashboard/fixtures/premium-dashboard-fixtures.js';
+import { graphCamera, settleGraph } from './dashboard-graph-canvas.js';
 import { productionManifest } from './premium-dashboard-server.js';
 
 type BrowserMetrics = {
@@ -184,6 +191,19 @@ async function warmRoute(page: Page, route: string, kind: string) {
   return durationMs;
 }
 
+/** List scroll, or the Graph camera's pan and zoom as written on the canvas world layer. */
+function surfaceState(selector: string): { scroll: string; zoom: string } {
+  const element = document.querySelector(selector);
+  if (!element) throw new Error(`Missing interaction surface ${selector}.`);
+  const world = element.querySelector<HTMLElement>('.canvas-world');
+  if (world) {
+    const [, zoom = '', pan = ''] = /^scale\(([^)]*)\) (.*)$/u.exec(world.style.transform) ?? [];
+    return { scroll: pan, zoom };
+  }
+  const shell = document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0;
+  return { scroll: String(element.scrollTop + element.scrollLeft + shell), zoom: '' };
+}
+
 async function interactionTrace(
   page: Page,
   kind: 'graph' | 'list',
@@ -208,21 +228,7 @@ async function interactionTrace(
     box.x + Math.min(box.width / 2, 400),
     box.y + Math.min(box.height / 2, 200),
   );
-  const before = await page.evaluate((selector) => {
-    const element = document.querySelector(selector);
-    if (!element) throw new Error('Missing interaction surface.');
-    return {
-      scroll:
-        element.scrollTop +
-        element.scrollLeft +
-        (selector === '.pc-list'
-          ? (document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0)
-          : 0),
-      transform: element.querySelector('.pc-graph__content')
-        ? getComputedStyle(element.querySelector('.pc-graph__content') as Element).transform
-        : '',
-    };
-  }, selector);
+  const before = await page.evaluate(surfaceState, selector);
   const started = await page.evaluate(() => {
     window.__dashboardMetrics.tracing = true;
     performance.mark('dashboard-interaction-start');
@@ -248,23 +254,9 @@ async function interactionTrace(
           box.y + Math.min(box.height / 2, 200),
         );
       }
-      const state = await page.evaluate((selector) => {
-        const element = document.querySelector(selector);
-        if (!element) throw new Error('Interaction surface disappeared.');
-        return {
-          scroll:
-            element.scrollTop +
-            element.scrollLeft +
-            (selector === '.pc-list'
-              ? (document.querySelector('.pc-shell__scroll')?.scrollTop ?? 0)
-              : 0),
-          transform: element.querySelector('.pc-graph__content')
-            ? getComputedStyle(element.querySelector('.pc-graph__content') as Element).transform
-            : '',
-        };
-      }, selector);
+      const state = await page.evaluate(surfaceState, selector);
       scrollObserved ||= state.scroll !== before.scroll;
-      zoomObserved ||= state.transform !== before.transform;
+      zoomObserved ||= state.zoom !== before.zoom;
       step += 1;
     }
   } finally {
@@ -305,6 +297,52 @@ async function interactionTrace(
     interactionObserved: scrollObserved && zoomObserved,
     panObserved: scrollObserved,
     ...(kind === 'graph' ? { zoomObserved } : {}),
+  };
+}
+
+const CHROME_TOGGLES = 16;
+
+/**
+ * Toggles the sidebar and navigation panel 16 times on the Graph and records the camera, the
+ * stage rectangle and the layout shifts of each toggle as engine chrome evidence.
+ */
+async function graphChromeToggles(
+  page: Page,
+  identity: Pick<CanvasChromeMeasurement, 'count' | 'fixture' | 'renderer' | 'world' | 'dpr'>,
+): Promise<CanvasChromeMeasurement> {
+  const stage = page.locator('.pc-graph');
+  const snapshot = async (): Promise<CanvasChromeSnapshot> => {
+    const box = await stage.boundingBox();
+    if (!box) throw new Error('Missing Graph stage.');
+    return { camera: await graphCamera(page), stage: box };
+  };
+  await settleGraph(page);
+  const before = await snapshot();
+  const snapshots: CanvasChromeSnapshot[] = [];
+  for (let index = 0; index < CHROME_TOGGLES; index += 1) {
+    await markPhase(page, `chrome-toggle ${index}`);
+    await page.keyboard.press(index % 2 === 0 ? 'Alt+BracketRight' : 'Alt+BracketLeft');
+    await page.waitForTimeout(250);
+    snapshots.push(await snapshot());
+  }
+  await markPhase(page, 'chrome-toggle done');
+  const after = await snapshot();
+  const evidence = await page.evaluate(() => window.__dashboardLayoutShifts.snapshot());
+  const first = evidence.phases.findIndex((phase) => phase.phase === 'chrome-toggle 0');
+  const phases = evidence.phases.slice(first, first + CHROME_TOGGLES);
+  const end = evidence.phases[first + CHROME_TOGGLES]?.startTime ?? Number.POSITIVE_INFINITY;
+  return {
+    ...identity,
+    before,
+    after,
+    snapshots,
+    layoutShifts: {
+      phases,
+      inputActions: [],
+      shifts: evidence.shifts.filter(
+        (shift) => shift.startTime >= (phases[0]?.startTime ?? 0) && shift.startTime < end,
+      ),
+    },
   };
 }
 
@@ -538,6 +576,34 @@ export function registerDashboardPerformanceTraceTests() {
           contentType: 'application/json',
         }),
       );
+      // Closed panels and no open inspector, so no toggle covers the selection.
+      await page.keyboard.press('Escape');
+      const chrome = await graphChromeToggles(page, {
+        count: dataset === 'representative' ? 708 : 5000,
+        fixture: `premium-${dataset}`,
+        renderer: 'react',
+        world: 'html',
+        dpr: 1,
+      });
+      const canvasEvaluation = evaluateCanvasTrace(
+        {
+          browser: { name: 'chromium', version: browser.version() },
+          budgetSet: traceBudgetPolicy().budgetSet,
+          chrome: [chrome],
+        },
+        chrome.count,
+      );
+      await testInfo.attach('graph-canvas-trace.json', {
+        body: Buffer.from(JSON.stringify({ chrome, canvasEvaluation }, null, 2)),
+        contentType: 'application/json',
+      });
+      process.stdout.write(
+        `graph canvas ${dataset}: ${JSON.stringify({
+          passed: canvasEvaluation.passed,
+          failures: canvasEvaluation.failures,
+          pending: canvasEvaluation.pending,
+        })}\n`,
+      );
       const stateResponse = await page.request.get(`/__fixture/state?dataset=${dataset}`);
       expect(stateResponse.ok()).toBe(true);
       const state = await stateResponse.json();
@@ -623,7 +689,7 @@ export function registerDashboardPerformanceTraceTests() {
                   available: graph.interactionObserved,
                   reason: graph.interactionObserved
                     ? null
-                    : 'Graph scroll and canvas zoom were not both observed.',
+                    : 'Graph pan and canvas zoom were not both observed.',
                 },
               },
             },
@@ -636,6 +702,7 @@ export function registerDashboardPerformanceTraceTests() {
       expect([...assets].every((asset) => asset.startsWith('/__production/'))).toBe(true);
       expect(evaluation.failures).toEqual([]);
       expect(evaluation.pending).toEqual([]);
+      expect(canvasEvaluation.failures).toEqual([]);
     });
   }
 }
