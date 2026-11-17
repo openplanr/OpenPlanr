@@ -488,6 +488,10 @@ test('navigation panel reaches every item and group at 1440 by 720', {
         await navigation.getByRole('region', { name: group.label, exact: true }).count(),
         1,
       );
+    // Measuring during the open transition reads a fractional box from the in-flight transform.
+    await navigation.evaluate((element) =>
+      Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+    );
     const report = await navigation.evaluate((element) => {
       const bounds = element.getBoundingClientRect();
       const body = element.querySelector('.canvas-chrome-panel-body');
