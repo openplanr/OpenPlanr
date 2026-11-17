@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.65.0
+
+### Minor Changes
+
+- 3de6110: Expose a read-only, actor-bound Planning diagnostics endpoint with an exact graph revision, safe source errors and explicit response limits. Add the shared diagnostics contract and connect the Data health tab to verified findings, with loading, empty, error and stale states that retain filters, focus and scroll during refresh.
+- 3de6110: Add a read-only `/api/planning/file-link` dashboard route that resolves a file an item declares to a bound editor link, with safe error codes.
+- 3aa8c4e: The protocol projection manifest (`lib/generated/protocol-projection.json`, schema 2.0.0) no longer records a `sha256` per entry; each projected file is checked against its source instead. `registry/v1.5.0/commands.json` and `registry/v1.5.0/skills.json` now declare `protocolVersion` 1.25.0 and carry no `documentDigest`, and `schemas/v1.25.0` adds the matching catalog schemas.
+
+### Patch Changes
+
+- 3de6110: The dashboard graph reader keeps artifacts with any id prefix and reports a skipped planning file as an `unrecognized-identity` diagnostic.
+- 3de6110: The diagnostics route reports a source path with a colon, a percent sign, a control character or a backslash instead of failing the response. A file whose name or id cannot be a node id, such as one with a backslash or a control character, is reported as an unrecognized identity instead of failing the graph, detail and diagnostics routes. A file link for an artifact whose own file name a link cannot use now says so instead of asking for a refresh.
+- 3de6110: Discover Markdown artifacts in canonical planning directories by valid frontmatter IDs as well as ID-prefixed filenames, including slug-named files. Keep documentation without artifact identities, hidden files, error reports, sprint notes, and noncanonical directories out of the graph.
+  
+  When two files claim the same id, the file named after the id wins, then the lexically smallest path, and `openplanr graph` prints each skipped duplicate with both paths on stderr.
+- 3de6110: Read legacy ADR headings and metadata bullets while preserving frontmatter precedence, exclude documentation from graph discovery, and resolve unique scoped references. Add separate validated read diagnostics for unresolved references, dependency cycles, duplicate identities, and invalid authored sprint dates without rewriting source data.
+
 ## 0.64.3
 
 ### Patch Changes
