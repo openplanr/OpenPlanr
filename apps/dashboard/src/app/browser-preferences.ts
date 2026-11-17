@@ -72,7 +72,7 @@ export function createBrowserShellAdapters(): ShellAdapters {
       return navigator.clipboard.writeText(text);
     },
     themePreference: {
-      initialChoice: theme === 'light' || theme === 'system' ? theme : 'dark',
+      initialChoice: theme === 'light' || theme === 'dark' ? theme : 'system',
       initialStorageError:
         typeof document !== 'undefined' &&
         document.documentElement.hasAttribute('data-theme-storage-error'),

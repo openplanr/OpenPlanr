@@ -138,11 +138,12 @@ test('production tokens, themes and local fonts work with external networking bl
     ...Object.entries(statuses).map(([status, foreground]) => [`status-${status}`, foreground]),
   ];
   for (const scenario of [
-    { stored: null, os: 'light', theme: 'dark' },
-    { stored: 'dark', os: 'light', theme: 'dark' },
-    { stored: 'light', os: 'dark', theme: 'light' },
-    { stored: 'system', os: 'dark', theme: 'dark' },
-    { stored: 'system', os: 'light', theme: 'light' },
+    { stored: null, os: 'light', theme: 'light', attribute: 'system' },
+    { stored: null, os: 'dark', theme: 'dark', attribute: 'system' },
+    { stored: 'dark', os: 'light', theme: 'dark', attribute: 'dark' },
+    { stored: 'light', os: 'dark', theme: 'light', attribute: 'light' },
+    { stored: 'system', os: 'dark', theme: 'dark', attribute: 'system' },
+    { stored: 'system', os: 'light', theme: 'light', attribute: 'system' },
   ]) {
     const context = await browser.newContext({
       colorScheme: scenario.os,
@@ -254,8 +255,8 @@ test('production tokens, themes and local fonts work with external networking bl
             surfaces,
           },
         );
-        assert.equal(result.theme, scenario.stored ?? 'dark');
-        assert(result.paints.every((paint) => paint === (scenario.stored ?? 'dark')));
+        assert.equal(result.theme, scenario.attribute);
+        assert(result.paints.every((paint) => paint === scenario.attribute));
         assert.equal(
           result.shifts.reduce((sum, shift) => sum + shift, 0),
           0,
@@ -321,7 +322,7 @@ test('production tokens, themes and local fonts work with external networking bl
       await context.close();
     }
   }
-  const denied = await browser.newContext();
+  const denied = await browser.newContext({ colorScheme: 'light' });
   try {
     await denied.addInitScript(() => {
       Object.defineProperty(Storage.prototype, 'getItem', {
@@ -338,10 +339,10 @@ test('production tokens, themes and local fonts work with external networking bl
     const page = await denied.newPage();
     await page.goto(origin);
     await page.waitForSelector('.pc-shell');
-    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
-    await page.getByText('Theme preference could not be saved in this browser.').waitFor();
-    await page.getByRole('button', { name: 'Theme: dark. Switch to system.' }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'system');
+    await page.getByText('Theme preference could not be saved in this browser.').waitFor();
+    await page.getByRole('button', { name: 'Theme: system. Switch to light.' }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
     await page.getByText('Theme preference could not be saved in this browser.').waitFor();
   } finally {
     await denied.close();
