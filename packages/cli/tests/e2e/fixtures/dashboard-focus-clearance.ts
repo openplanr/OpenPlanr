@@ -214,6 +214,16 @@ function stopsUnderSidebar(page: Page): Promise<string[]> {
   });
 }
 
+/** Page errors and console errors logged from now on. */
+function collectErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  return errors;
+}
+
 /** Browser coverage that keyboard focus stays clear of the floating chrome. */
 export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
   test.describe('focus clear of floating chrome', () => {
@@ -381,6 +391,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         await openFixture(page, '#/graph', { planningScenario: 'delivery' });
         await settleGraph(page);
         await pinSidebar(page);
+        const errors = collectErrors(page);
         const node = page.locator('.pc-graph-node[data-canonical-id="T-073"]');
         const sidebar = page.locator('[data-chrome-slot="sidebar"]');
         const edge = (await sidebar.boundingBox())?.x;
@@ -399,6 +410,7 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
         expect(box.x + box.width).toBeLessThanOrEqual(edge);
         expect((await focusReport(page)).visible).toBeGreaterThan(FOCUS_HIDDEN_SHARE);
         await expectSidebarPinned(page);
+        expect(errors).toEqual([]);
       });
 
       test(`moves no layout while clearing and releasing focus beside the sidebar at ${width}`, async ({
