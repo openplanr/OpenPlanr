@@ -40,10 +40,12 @@ import {
   takeListStatus,
   useInspectorStore,
   useListKeyboardWindow,
+  useListLabelsColumn,
   useListLayout,
   useListPresentation,
   useListRowViewport,
   useListScrollAnchor,
+  useListWindowWidth,
   usePlanningCopy,
   usePlanningShortcuts,
   usePublishRouteTools,
@@ -94,7 +96,6 @@ export function ListPage({
     setSelected,
   } = useListPresentation(() => takeListStatus() ?? ALL);
   const inspector = useInspectorStore();
-  const layout = useListLayout();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
   const graph = model ? retainGraphRevision(model.graph, model.binding) : undefined;
@@ -188,6 +189,9 @@ export function ListPage({
     visibleRows.map((entry) => entry.node),
     selectedId,
   );
+  const windowWidth = useListWindowWidth(rootRef, all.length > 0);
+  const layout = useListLayout(windowWidth);
+  const labelsColumn = useListLabelsColumn(windowWidth);
   useListScrollAnchor(
     rootRef,
     `${presentationKey}:${currentPage}:${collapsedGroups.join()}`,
@@ -356,6 +360,7 @@ export function ListPage({
       data-managed-rows="true"
       data-checked={selected.length > 0 || undefined}
       data-list-layout={layout}
+      data-list-labels={labelsColumn ? undefined : 'hidden'}
     >
       <PlanningNotice presentation={model.presentation} />
       {removalNotice ? (
@@ -528,7 +533,9 @@ export function ListPage({
                               />
                             ),
                           },
-                          ...LIST_COLUMNS,
+                          ...(labelsColumn
+                            ? LIST_COLUMNS
+                            : LIST_COLUMNS.filter((column) => column.key !== 'labels')),
                         ]
                   }
                 />

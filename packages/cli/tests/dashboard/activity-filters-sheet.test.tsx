@@ -11,7 +11,7 @@ function stubWidth(phone: boolean) {
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query: string) => ({
-      matches: query === '(max-width: 1199px)' || (phone && query === '(max-width: 599px)'),
+      matches: query === '(max-width: 899px)' || (phone && query === '(max-width: 599px)'),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })),

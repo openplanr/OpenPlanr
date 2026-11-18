@@ -216,8 +216,12 @@ export function useListScrollAnchor(
 
 export type ListLayout = 'desktop' | 'tablet' | 'phone';
 
-const TABLET_QUERY = '(max-width: 1199px)';
+const TABLET_QUERY = '(max-width: 899px)';
 const PHONE_QUERY = '(max-width: 599px)';
+const NO_LABELS_QUERY = '(max-width: 1199px)';
+// The table's minimum widths in list.css, without and with the Labels column.
+const TABLE_MIN_WIDTH = 720;
+const LABELS_TABLE_MIN_WIDTH = 900;
 
 function listLayout(): ListLayout {
   if (window.matchMedia?.(PHONE_QUERY).matches) return 'phone';
@@ -232,9 +236,51 @@ function subscribeListLayout(onChange: () => void) {
   };
 }
 
-/** Desktop from 1200px, tablet from 600px, phone below. */
-export function useListLayout(): ListLayout {
-  return useSyncExternalStore(subscribeListLayout, listLayout, () => 'desktop');
+/** Width of the List's table window, which pinned panels narrow; 0 until it is laid out. */
+export function useListWindowWidth(root: RefObject<HTMLDivElement | null>, mounted: boolean) {
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const element = root.current?.querySelector<HTMLElement>('.pc-list__window');
+    if (!mounted || !element) return;
+    // The border box includes any scrollbar, so the layout it picks cannot change this width.
+    const measure = () => setWidth(element.getBoundingClientRect().width);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [root, mounted]);
+  return width;
+}
+
+/**
+ * Desktop from a 900px window while the table window fits the table, tablet from 600px, phone
+ * below. An unmeasured window (0) follows the viewport alone.
+ */
+export function useListLayout(windowWidth = 0): ListLayout {
+  const viewport = useSyncExternalStore<ListLayout>(
+    subscribeListLayout,
+    listLayout,
+    () => 'desktop',
+  );
+  if (viewport !== 'desktop' || windowWidth <= 0) return viewport;
+  return windowWidth < TABLE_MIN_WIDTH ? 'tablet' : 'desktop';
+}
+
+function subscribeListLabels(onChange: () => void) {
+  const query = window.matchMedia?.(NO_LABELS_QUERY);
+  query?.addEventListener?.('change', onChange);
+  return () => query?.removeEventListener?.('change', onChange);
+}
+
+/** Whether the desktop List shows Labels: from a 1200px window while the table window fits it. */
+export function useListLabelsColumn(windowWidth = 0): boolean {
+  const viewport = useSyncExternalStore(
+    subscribeListLabels,
+    () => !window.matchMedia?.(NO_LABELS_QUERY).matches,
+    () => true,
+  );
+  return viewport && (windowWidth <= 0 || windowWidth >= LABELS_TABLE_MIN_WIDTH);
 }
 
 /** Fixed pitches the row window estimates with; rows and groups render at these heights. */

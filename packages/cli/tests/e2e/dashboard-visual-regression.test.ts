@@ -4242,12 +4242,96 @@ test.describe('dashboard real-browser quality', () => {
     await expect(page.locator('.pc-mobile-nav')).toBeVisible();
   });
 
-  test('shows the List count beside the view name from 600 to 1199', async ({ page }) => {
-    for (const width of [1440, 1199, 768, 600, 599, 390]) {
+  test('fits the List table and toolbar to its own width, with and without pinned panels', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const pin = async (slot: string, key: string, name: string) => {
+      const panel = page.locator(`[data-chrome-slot="${slot}"]`);
+      const button = panel.getByRole('button', { name, exact: true });
+      if ((await panel.getAttribute('data-open')) !== 'true') {
+        await page.keyboard.press(key);
+        await expect(panel).toHaveAttribute('data-open', 'true');
+      }
+      if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click();
+      await expect(button).toHaveAttribute('aria-pressed', 'true');
+    };
+    const states = [
+      { width: 1440, pinned: 'none', layout: 'desktop', labels: true },
+      { width: 1199, pinned: 'none', layout: 'desktop', labels: false },
+      { width: 1024, pinned: 'none', layout: 'desktop', labels: false },
+      { width: 900, pinned: 'none', layout: 'desktop', labels: false },
+      { width: 1440, pinned: 'sidebar', layout: 'desktop', labels: true },
+      { width: 1199, pinned: 'sidebar', layout: 'desktop', labels: false },
+      { width: 1024, pinned: 'sidebar', layout: 'tablet', labels: false },
+      { width: 1440, pinned: 'both', layout: 'desktop', labels: false },
+      { width: 1199, pinned: 'both', layout: 'tablet', labels: false },
+    ] as const;
+    for (const state of states) {
+      const name = `${state.width} px, pinned ${state.pinned}`;
+      await page.setViewportSize({ width: state.width, height: 900 });
+      await openFixture(page, '#/list', { planningScenario: 'delivery' });
+      if (state.pinned !== 'none') await pin('sidebar', 'Alt+BracketRight', 'Pin sidebar');
+      if (state.pinned === 'both') await pin('navigation', 'Alt+BracketLeft', 'Pin navigation');
+      const list = page.locator('.pc-list');
+      await expect(list, `layout at ${name}`).toHaveAttribute('data-list-layout', state.layout);
+      const clipped = await list.locator('.pc-list__toolbar').evaluate((toolbar) =>
+        [
+          ...toolbar.querySelectorAll<HTMLElement>(
+            '.pc-chip, .pc-chip__label, .pc-list__clear, .pc-list__filters',
+          ),
+        ]
+          .filter((control) => {
+            const tops: number[] = [];
+            const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              if (!node.textContent?.trim()) continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              for (const rect of range.getClientRects()) tops.push(rect.top);
+            }
+            const wrapped = Math.max(...tops) - Math.min(...tops) > 8;
+            return control.scrollWidth > control.clientWidth + 1 || wrapped;
+          })
+          .map((control) => control.textContent),
+      );
+      expect(clipped, `clipped toolbar controls at ${name}`).toEqual([]);
+      if (state.layout !== 'desktop') continue;
+      await expect(list.getByRole('heading', { level: 1, name: 'List' })).toBeVisible();
+      for (const column of ['ID', 'Title', 'Status', 'Priority', 'Updated']) {
+        await expect(
+          list.getByRole('columnheader', { name: column, exact: true }),
+          `${column} at ${name}`,
+        ).toBeVisible();
+      }
+      const labels = list.getByRole('columnheader', { name: 'Labels', exact: true });
+      if (state.labels) await expect(labels, `Labels at ${name}`).toBeVisible();
+      else await expect(labels, `Labels at ${name}`).toHaveCount(0);
+      const header = await list
+        .getByRole('columnheader', { name: 'Updated', exact: true })
+        .boundingBox();
+      const cell = await list.locator('tbody td[data-column="updated"]').first().boundingBox();
+      const box = await list.locator('.pc-list__window').boundingBox();
+      if (!header || !cell || !box) throw new Error(`Missing List geometry at ${name}.`);
+      expect(header.x + header.width, `Updated inside the List at ${name}`).toBeLessThanOrEqual(
+        box.x + box.width + 1,
+      );
+      const overflow = await list
+        .locator('.pc-list__window')
+        .evaluate((element) => element.scrollWidth - element.clientWidth);
+      expect(overflow, `table scrolls sideways at ${name}`).toBeLessThanOrEqual(1);
+      expect(Math.abs(cell.x - header.x), `Updated cell under its header at ${name}`).toBeLessThan(
+        1,
+      );
+    }
+  });
+
+  test('shows the List count beside the view name from 600 to 899', async ({ page }) => {
+    for (const width of [1440, 1199, 900, 899, 768, 600, 599, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await openFixture(page, '#/list');
       const count = page.locator('[data-chrome-slot="menu"] .pc-topbar__count');
-      if (width >= 600 && width < 1200) {
+      if (width >= 600 && width < 900) {
         await expect(count, `view count at ${width}`).toBeVisible();
         await expect(count).toHaveText(/^\d+ of \d+$/u);
       } else {

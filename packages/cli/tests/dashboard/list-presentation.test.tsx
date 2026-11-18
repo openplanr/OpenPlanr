@@ -1352,7 +1352,7 @@ function stubListLayout(layout: 'tablet' | 'phone') {
     'matchMedia',
     vi.fn((query: string) => ({
       matches:
-        query === '(max-width: 1199px)' || (layout === 'phone' && query === '(max-width: 599px)'),
+        query === '(max-width: 899px)' || (layout === 'phone' && query === '(max-width: 599px)'),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })),
