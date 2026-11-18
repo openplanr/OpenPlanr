@@ -58,8 +58,8 @@
   visibility: hidden;
   pointer-events: none;
 }
-/* Right-anchored chrome clears the page scroller's classic scrollbar; a canvas stage covers it. */
-.pc-shell:not([data-canvas-route]) {
+/* Right chrome clears a classic page scrollbar on every route, so it stays put between routes. */
+.pc-shell {
   --pc-chrome-gutter: var(--pc-scrollbar-width);
 }
 .pc-chrome .canvas-chrome-action,

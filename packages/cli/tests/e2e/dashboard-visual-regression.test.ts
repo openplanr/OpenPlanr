@@ -226,6 +226,19 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
   expect(responseErrors, `API errors while loading ${route}`).toEqual([]);
 }
 
+/** Opens a sibling page whose scrollers draw a 15 px classic scrollbar, as on Linux and Windows. */
+async function openClassicScrollbarPage(page: Page): Promise<Page> {
+  const classic = await page.context().newPage();
+  await classic.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
+      document.head.append(style);
+    });
+  });
+  return classic;
+}
+
 async function layoutReport(page: Page) {
   return page.evaluate((activeTargetSelector) => {
     const horizontalOverflow =
@@ -1219,7 +1232,11 @@ test.describe('dashboard real-browser quality', () => {
     const overlay = await page.locator('[data-chrome-slot="sidebar"]').boundingBox();
     if (!overlay) throw new Error('Missing floating sidebar.');
     expect(overlay.x).toBeLessThan(before.main.x + before.main.width);
-    expect(before.main.x + before.main.width - (overlay.x + overlay.width)).toBe(12);
+    // The sidebar sits 12 px inside the scroller's inner edge, clear of a classic scrollbar.
+    const inner = await scroll.evaluate(
+      (element) => element.getBoundingClientRect().left + element.clientLeft + element.clientWidth,
+    );
+    expect(inner - (overlay.x + overlay.width)).toBe(12);
     await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
       'data-detail-state',
       'ready',
@@ -4085,21 +4102,35 @@ test.describe('dashboard real-browser quality', () => {
         if (width >= 600) {
           await expect(page.locator('header.pc-topbar')).toHaveCount(0);
           await expect(page.locator('.pc-mobile-nav')).toHaveCount(0);
-          const boxes = await page.evaluate(() =>
-            Object.fromEntries(
-              ['menu', 'toolbar', 'action', 'help'].map((slot) => {
-                const box = document
-                  .querySelector(`[data-chrome-slot="${slot}"]`)
-                  ?.getBoundingClientRect();
-                return [slot, box && { x: box.x, y: box.y, w: box.width, h: box.height }];
-              }),
-            ),
-          );
+          // Right chrome is measured from the page scroller's inner edge, clear of a classic scrollbar.
+          const { inner, boxes } = await page.evaluate(() => {
+            const scroller = document.querySelector('.pc-shell__scroll');
+            if (!scroller) throw new Error('Missing .pc-shell__scroll');
+            const outer = scroller.getBoundingClientRect();
+            return {
+              inner: outer.left + scroller.clientLeft + scroller.clientWidth,
+              boxes: Object.fromEntries(
+                ['menu', 'toolbar', 'action', 'help'].map((slot) => {
+                  const box = document
+                    .querySelector(`[data-chrome-slot="${slot}"]`)
+                    ?.getBoundingClientRect();
+                  return [slot, box && { x: box.x, y: box.y, w: box.width, h: box.height }];
+                }),
+              ),
+            };
+          });
           expect(boxes.menu, `${route} menu at ${width}`).toMatchObject({ x: 12, y: 12, h: 40 });
           expect(boxes.toolbar, `${route} tool pill at ${width}`).toMatchObject({ y: 12, h: 44 });
           expect(boxes.action?.h, `${route} action pill at ${width}`).toBe(40);
-          expect((boxes.action?.x ?? 0) + (boxes.action?.w ?? 0)).toBe(width - 12);
+          expect(
+            inner - (boxes.action?.x ?? 0) - (boxes.action?.w ?? 0),
+            `${route} action inset at ${width}`,
+          ).toBe(12);
           expect(boxes.help, `${route} help at ${width}`).toMatchObject({ w: 40, h: 40 });
+          expect(
+            inner - (boxes.help?.x ?? 0) - (boxes.help?.w ?? 0),
+            `${route} help inset at ${width}`,
+          ).toBe(12);
           expect((boxes.help?.y ?? 0) + (boxes.help?.h ?? 0)).toBe(900 - 12);
         } else {
           await expect(page.locator('.canvas-chrome-root')).toHaveCount(0);
@@ -4466,39 +4497,48 @@ test.describe('dashboard real-browser quality', () => {
   });
 
   test('keeps the selection bar clear of the floating help button on tablets', async ({ page }) => {
-    for (const viewport of [
-      { width: 768, height: 1024 },
-      { width: 844, height: 390 },
-      { width: 600, height: 900 },
-      { width: 899, height: 900 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await page.goto(fixtureUrl('#/home', { dataset: 'representative' }));
-      const home = page.locator('[data-route-kind="planning.overview"]');
+    const classic = await openClassicScrollbarPage(page);
+    for (const [target, viewport] of [page, classic].flatMap((target) =>
+      [
+        { width: 768, height: 1024 },
+        { width: 844, height: 390 },
+        { width: 600, height: 900 },
+        { width: 899, height: 900 },
+      ].map((viewport) => [target, viewport] as const),
+    )) {
+      await target.setViewportSize(viewport);
+      await target.goto(fixtureUrl('#/home', { dataset: 'representative' }));
+      const home = target.locator('[data-route-kind="planning.overview"]');
       await expect(home.locator('.pc-home__row').first()).toBeVisible();
       await home.locator('.pc-home__row .pc-artifact-row__link').first().focus();
-      const bar = page.locator('.pc-selection-bar');
+      const bar = target.locator('.pc-selection-bar');
       await expect(bar).toBeVisible();
-      const report = await page.evaluate(() => {
+      const report = await target.evaluate(() => {
         const help = document.querySelector('[data-chrome-slot="help"]')?.getBoundingClientRect();
         const box = document.querySelector('.pc-selection-bar')?.getBoundingClientRect();
-        if (!help || !box) throw new Error('Missing help button or selection bar');
+        const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+        if (!help || !box || !scroller) throw new Error('Missing help, selection bar or scroller');
         const hit = document.elementFromPoint(
           help.left + help.width / 2,
           help.top + help.height / 2,
         );
         return {
+          scrollbar: scroller.offsetWidth - scroller.clientWidth,
           right: box.right,
           helpLeft: help.left,
           bottom: window.innerHeight - box.bottom,
           helpOnTop: Boolean(hit?.closest('[data-chrome-slot="help"]')),
         };
       });
-      const context = `${viewport.width}x${viewport.height}`;
-      expect(report.right, `bar left of help at ${context}`).toBeLessThanOrEqual(report.helpLeft);
+      const context = `${viewport.width}x${viewport.height}${target === classic ? ' with a classic scrollbar' : ''}`;
+      if (target === classic) expect(report.scrollbar, `scrollbar at ${context}`).toBe(15);
+      expect(report.right, `bar 12 px left of help at ${context}`).toBeLessThanOrEqual(
+        report.helpLeft - 12,
+      );
       expect(report.helpOnTop, `help reachable beside the bar at ${context}`).toBe(true);
       expect(report.bottom, `bar inset from the bottom at ${context}`).toBeGreaterThanOrEqual(12);
     }
+    await classic.close();
   });
 
   test('centres a one-row selection bar below open panels from 768 to 1440 px', async ({
@@ -4582,14 +4622,7 @@ test.describe('dashboard real-browser quality', () => {
           }),
         };
       }, selectors);
-    const classic = await page.context().newPage();
-    await classic.addInitScript(() => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
-        document.head.append(style);
-      });
-    });
+    const classic = await openClassicScrollbarPage(page);
     const rightChrome = ['[data-chrome-slot="action"]', '[data-chrome-slot="help"]'];
     for (const target of [page, classic]) {
       for (const [width, height, gutter] of [
@@ -4632,13 +4665,23 @@ test.describe('dashboard real-browser quality', () => {
     );
     expect(bottom).toBe(64);
     expect((await edges(classic, ['.pc-help-card'])).chrome).toEqual([12]);
-    // The Graph stage covers the scroller, so its right chrome keeps the plain inset.
+    // The Graph keeps the page routes' right chrome, so switching routes moves nothing.
+    const rightChromeX = (target: Page) =>
+      target.evaluate(() =>
+        ['action', 'help'].map(
+          (slot) =>
+            document.querySelector(`[data-chrome-slot="${slot}"]`)?.getBoundingClientRect().x,
+        ),
+      );
     for (const [width, height] of [
       [1440, 1000],
       [1024, 768],
       [768, 1024],
     ] as const) {
       await classic.setViewportSize({ width, height });
+      await classic.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+      await expect(classic.locator('[data-route-kind="planning.list"]')).toBeVisible();
+      const listX = await rightChromeX(classic);
       await classic.goto(fixtureUrl('#/graph', { dataset: 'artboard' }));
       await expect(classic.locator('.pc-graph-minimap')).toBeVisible();
       await expect
@@ -4650,16 +4693,22 @@ test.describe('dashboard real-browser quality', () => {
                 if (!element) throw new Error(`${selector} is missing on the Graph.`);
                 return element.getBoundingClientRect();
               };
+              const scroller = document.querySelector('.pc-shell__scroll');
+              if (!scroller) throw new Error('.pc-shell__scroll is missing on the Graph.');
+              const inner =
+                scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth;
               const help = box('[data-chrome-slot="help"]');
               return {
-                action: window.innerWidth - box('[data-chrome-slot="action"]').right,
-                help: window.innerWidth - help.right,
+                scrollbar: window.innerWidth - inner,
+                action: inner - box('[data-chrome-slot="action"]').right,
+                help: inner - help.right,
                 minimapGap: help.left - box('.pc-graph-minimap').right,
               };
             }),
           { message: `Graph right chrome at ${width}` },
         )
-        .toEqual({ action: 12, help: 12, minimapGap: 12 });
+        .toEqual({ scrollbar: 15, action: 12, help: 12, minimapGap: 12 });
+      expect(await rightChromeX(classic), `List and Graph right chrome at ${width}`).toEqual(listX);
     }
     await classic.close();
   });

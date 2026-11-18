@@ -169,6 +169,8 @@ async function geometry(page) {
       const { x, y, width, height } = element.getBoundingClientRect();
       return { x, y, width, height };
     };
+    const scroller = document.querySelector('.pc-shell__scroll');
+    if (!scroller) throw new Error('Missing shell geometry target: .pc-shell__scroll');
     return {
       navigation: rect('[data-chrome-slot="navigation"]'),
       sidebar: rect('[data-chrome-slot="sidebar"]'),
@@ -181,14 +183,17 @@ async function geometry(page) {
       scroll: rect('.pc-shell__scroll'),
       palette: rect('[data-chrome-slot="toolbar"] button[aria-label^="Search or run"]'),
       viewport: { width: innerWidth, height: innerHeight },
-      inset: getComputedStyle(document.querySelector('.pc-shell__scroll')).paddingLeft,
+      inset: getComputedStyle(scroller).paddingLeft,
+      scrollbar: scroller.offsetWidth - scroller.clientWidth,
+      edge: scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth,
     };
   });
 }
 
 /** Approved floating geometry: 12 px inset, panels 64 px from top and bottom, fixed pill sizes. */
 function assertChromeFrame(actual, context) {
-  const { width, height } = actual.viewport;
+  const { height } = actual.viewport;
+  const width = actual.edge;
   assert.deepEqual(
     actual.navigation,
     { x: 12, y: 64, width: 264, height: height - 128 },
@@ -212,6 +217,12 @@ function assertChromeFrame(actual, context) {
   );
 }
 
+/** A right-anchored slot's box, with x as its right inset from the scroller's inner edge. */
+function fromEdge(actual, slot) {
+  const { x, y, width, height } = actual[slot];
+  return { right: actual.edge - x - width, y, width, height };
+}
+
 function assertChrome(actual, baseline, pinned, context) {
   assertChromeFrame(actual, context);
   assert.equal(actual.column.x, 0, `${context}: content column spans the window`);
@@ -222,7 +233,11 @@ function assertChrome(actual, baseline, pinned, context) {
   );
   assert.deepEqual(actual.palette, baseline.palette, `${context}: palette stays fixed`);
   assert.deepEqual(actual.menu, baseline.menu, `${context}: menu stays fixed`);
-  assert.deepEqual(actual.action, baseline.action, `${context}: action pill stays fixed`);
+  assert.deepEqual(
+    fromEdge(actual, 'action'),
+    fromEdge(baseline, 'action'),
+    `${context}: action pill stays fixed`,
+  );
   assert.deepEqual(actual.main, baseline.main, `${context}: main stays fixed`);
   assert.deepEqual(actual.scroll, baseline.scroll, `${context}: scroll stays fixed`);
 }
@@ -326,6 +341,39 @@ test('tool pill fixes the palette position across routes and the help card reser
     0,
     JSON.stringify(shifts),
   );
+  assert.deepEqual(errors, []);
+});
+
+test('right chrome clears a classic page scrollbar by the approved inset', {
+  timeout: 60_000,
+}, async (t) => {
+  const browser = await launchBrowser();
+  t.after(() => browser.close());
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  t.after(() => context.close());
+  await context.route('**/*', (route) => route.abort());
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.setContent('<!doctype html><html><body><div id="root"></div></body></html>');
+  await page.addStyleTag({
+    content: `${styles}\n::-webkit-scrollbar { width: 15px; height: 15px; }`,
+  });
+  await page.addScriptTag({ content: await bundleFixture() });
+  await settle(page);
+  for (const width of [1440, 900]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await render(page, { route: '#/list', connectionState: 'connected' });
+    const list = await geometry(page);
+    assert.equal(list.scrollbar, 15, `${width}: classic scrollbar`);
+    assert.equal(list.edge, width - 15, `${width}: List measures from the scroller's inner edge`);
+    assertChromeFrame(list, `${width}: List`);
+    await render(page, { route: '#/graph', connectionState: 'connected' });
+    const graph = await geometry(page);
+    assertChromeFrame(graph, `${width}: Graph`);
+    for (const slot of ['sidebar', 'action', 'help'])
+      assert.deepEqual(graph[slot], list[slot], `${width}: ${slot} stays put from List to Graph`);
+  }
   assert.deepEqual(errors, []);
 });
 
