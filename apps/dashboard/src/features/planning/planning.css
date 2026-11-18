@@ -359,7 +359,7 @@
 .pc-graph-minimap {
   position: fixed;
   overflow: hidden;
-  right: 64px;
+  right: calc(64px + var(--pc-chrome-gutter, 0px));
   bottom: 12px;
   padding: 5px;
   background: var(--pc-surface-panel);

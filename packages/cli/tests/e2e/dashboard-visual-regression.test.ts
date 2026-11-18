@@ -4515,13 +4515,23 @@ test.describe('dashboard real-browser quality', () => {
     );
     expect(bottom).toBe(64);
     expect((await edges(classic, ['.pc-help-card'])).chrome).toEqual([12]);
-    // The Graph stage covers the scroller, so its right chrome keeps the plain inset.
+    // The Graph keeps the page routes' right chrome, so switching routes moves nothing.
+    const rightChromeX = (target: Page) =>
+      target.evaluate(() =>
+        ['action', 'help'].map(
+          (slot) =>
+            document.querySelector(`[data-chrome-slot="${slot}"]`)?.getBoundingClientRect().x,
+        ),
+      );
     for (const [width, height] of [
       [1440, 1000],
       [1024, 768],
       [768, 1024],
     ] as const) {
       await classic.setViewportSize({ width, height });
+      await classic.goto(fixtureUrl('#/list', { dataset: 'artboard' }));
+      await expect(classic.locator('[data-route-kind="planning.list"]')).toBeVisible();
+      const listX = await rightChromeX(classic);
       await classic.goto(fixtureUrl('#/graph', { dataset: 'artboard' }));
       await expect(classic.locator('.pc-graph-minimap')).toBeVisible();
       await expect
@@ -4533,16 +4543,22 @@ test.describe('dashboard real-browser quality', () => {
                 if (!element) throw new Error(`${selector} is missing on the Graph.`);
                 return element.getBoundingClientRect();
               };
+              const scroller = document.querySelector('.pc-shell__scroll');
+              if (!scroller) throw new Error('.pc-shell__scroll is missing on the Graph.');
+              const inner =
+                scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth;
               const help = box('[data-chrome-slot="help"]');
               return {
-                action: window.innerWidth - box('[data-chrome-slot="action"]').right,
-                help: window.innerWidth - help.right,
+                scrollbar: window.innerWidth - inner,
+                action: inner - box('[data-chrome-slot="action"]').right,
+                help: inner - help.right,
                 minimapGap: help.left - box('.pc-graph-minimap').right,
               };
             }),
           { message: `Graph right chrome at ${width}` },
         )
-        .toEqual({ action: 12, help: 12, minimapGap: 12 });
+        .toEqual({ scrollbar: 15, action: 12, help: 12, minimapGap: 12 });
+      expect(await rightChromeX(classic), `List and Graph right chrome at ${width}`).toEqual(listX);
     }
     await classic.close();
   });

@@ -185,10 +185,7 @@ async function geometry(page) {
       viewport: { width: innerWidth, height: innerHeight },
       inset: getComputedStyle(scroller).paddingLeft,
       scrollbar: scroller.offsetWidth - scroller.clientWidth,
-      // A canvas stage covers the scrollbar, so its right chrome measures from the window.
-      edge: document.querySelector('.pc-shell')?.hasAttribute('data-canvas-route')
-        ? innerWidth
-        : scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth,
+      edge: scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth,
     };
   });
 }
@@ -220,7 +217,7 @@ function assertChromeFrame(actual, context) {
   );
 }
 
-/** A right-anchored slot's box, with x as its right inset from the chrome's reference edge. */
+/** A right-anchored slot's box, with x as its right inset from the scroller's inner edge. */
 function fromEdge(actual, slot) {
   const { x, y, width, height } = actual[slot];
   return { right: actual.edge - x - width, y, width, height };
@@ -372,7 +369,10 @@ test('right chrome clears a classic page scrollbar by the approved inset', {
     assert.equal(list.edge, width - 15, `${width}: List measures from the scroller's inner edge`);
     assertChromeFrame(list, `${width}: List`);
     await render(page, { route: '#/graph', connectionState: 'connected' });
-    assertChromeFrame(await geometry(page), `${width}: Graph`);
+    const graph = await geometry(page);
+    assertChromeFrame(graph, `${width}: Graph`);
+    for (const slot of ['sidebar', 'action', 'help'])
+      assert.deepEqual(graph[slot], list[slot], `${width}: ${slot} stays put from List to Graph`);
   }
   assert.deepEqual(errors, []);
 });
