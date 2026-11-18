@@ -704,6 +704,14 @@ export function registerDashboardPerformanceTraceTests() {
       expect(evaluation.failures).toEqual([]);
       expect(evaluation.pending).toEqual([]);
       expect(canvasEvaluation.failures).toEqual([]);
+      // The dashboard records chrome toggles only; a new gap or a newly measured section must
+      // update this list.
+      expect(canvasEvaluation.pending).toEqual([
+        'dropped frames at fit: compositor trace is not measured',
+        ...['measurements', 'hitTests', 'lod', 'pins'].map(
+          (section) => `${section}: absent for tier ${chrome.count}`,
+        ),
+      ]);
     });
   }
 }
