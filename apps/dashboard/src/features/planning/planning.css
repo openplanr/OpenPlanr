@@ -357,6 +357,7 @@
   display: none;
 }
 .pc-graph-minimap {
+  --pc-graph-minimap-node: var(--pc-border-strong);
   position: fixed;
   overflow: hidden;
   right: 64px;

@@ -512,7 +512,6 @@ export function GraphCanvas({
         <GraphMinimap
           controller={controller}
           nodes={model.nodes}
-          style={colors}
           selected={selected}
           stageRoot={stage}
         />
@@ -522,7 +521,6 @@ export function GraphCanvas({
             <GraphMinimap
               controller={controller}
               nodes={model.nodes}
-              style={colors}
               selected={selected}
               stageRoot={stage}
               embedded

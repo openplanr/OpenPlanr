@@ -436,9 +436,12 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
         await page.locator('.pc-graph-minimap__viewport').boundingBox(),
         'minimap viewport',
       );
-      // The chain is far wider than tall, so the whole graph spans the minimap's width.
-      expect(frame.x).toBeLessThanOrEqual(canvas.x + 1);
-      expect(frame.x + frame.width).toBeGreaterThanOrEqual(canvas.x + canvas.width - 1);
+      // The fitted view holds the whole chain, so the map is that view: inside the canvas and
+      // filling it along one axis.
+      expect(inside(frame, canvas, 0.5)).toBe(true);
+      const fillsWidth = Math.abs(frame.width - canvas.width) <= 1;
+      const fillsHeight = Math.abs(frame.height - canvas.height) <= 1;
+      expect(fillsWidth || fillsHeight).toBe(true);
       await expect(page.locator('.canvas-overview')).toBeVisible();
     });
 

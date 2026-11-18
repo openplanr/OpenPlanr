@@ -1,10 +1,11 @@
 import {
   type CanvasController,
   type CanvasNode,
-  drawMinimap,
+  drawCameraOverview,
   type MinimapTransform,
   minimapToWorld,
   type OverviewStyle,
+  type Rect,
 } from '@openplanr/canvas';
 import { useChrome } from '@openplanr/canvas/react';
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
@@ -13,7 +14,31 @@ import { SIDEBAR_PANEL } from '../shell/floating-chrome-parts.js';
 // The drawing inside the 200 x 128 minimap, less its 5 px padding and 1 px border.
 const MINIMAP_WIDTH = 188;
 const MINIMAP_HEIGHT = 116;
-const EMPTY_VIEWPORT = Object.freeze({ x: 0, y: 0, width: 0, height: 0 });
+// World margin around the cards, so one card never fills the map.
+const CONTENT_MARGIN = 32;
+
+/** Scale and offset that fit the cards and the visible stage, both in world units, into the map. */
+export function minimapFit(nodes: readonly CanvasNode[], view: Rect): MinimapTransform {
+  let left = view.x;
+  let top = view.y;
+  let right = view.x + view.width;
+  let bottom = view.y + view.height;
+  for (const { bounds } of nodes) {
+    left = Math.min(left, bounds.x - CONTENT_MARGIN);
+    top = Math.min(top, bounds.y - CONTENT_MARGIN);
+    right = Math.max(right, bounds.x + bounds.width + CONTENT_MARGIN);
+    bottom = Math.max(bottom, bounds.y + bounds.height + CONTENT_MARGIN);
+  }
+  const width = right - left;
+  const height = bottom - top;
+  if (!(width > 0 && height > 0)) return { scale: 1, offsetX: 0, offsetY: 0 };
+  const scale = Math.min(MINIMAP_WIDTH / width, MINIMAP_HEIGHT / height);
+  return {
+    scale,
+    offsetX: (MINIMAP_WIDTH - width * scale) / 2 - left * scale,
+    offsetY: (MINIMAP_HEIGHT - height * scale) / 2 - top * scale,
+  };
+}
 
 /**
  * Overview and minimap fills per artifact type, read from the Graph tokens.
@@ -54,14 +79,12 @@ export function useGraphColors(scope: RefObject<HTMLElement | null>): OverviewSt
 export function GraphMinimap({
   controller,
   nodes,
-  style,
   selected,
   stageRoot,
   embedded = false,
 }: Readonly<{
   controller: CanvasController;
   nodes: readonly CanvasNode[];
-  style: OverviewStyle;
   selected: string | null;
   /** Element containing the canvas stage the minimap mirrors. */
   stageRoot: RefObject<HTMLElement | null>;
@@ -80,46 +103,66 @@ export function GraphMinimap({
     if (!element || mobile || embedded) return;
     return registerSurface('graph-minimap', 'bottom', element, { persistent: true });
   }, [registerSurface, mobile, embedded]);
-  useLayoutEffect(() => {
+  useEffect(() => {
     const target = canvas.current;
     const context = target?.getContext('2d');
-    if (!target || !context) return;
+    const stage = stageRoot.current?.querySelector<HTMLElement>('.canvas-stage');
+    if (!target || !context || !stage) return;
     const ratio = window.devicePixelRatio || 1;
     target.width = MINIMAP_WIDTH * ratio;
     target.height = MINIMAP_HEIGHT * ratio;
-    transform.current = drawMinimap(
-      context,
-      { nodes, edges: [], selection: [], style, viewport: EMPTY_VIEWPORT },
-      { width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT, devicePixelRatio: ratio },
-    );
-  }, [nodes, style]);
-  useEffect(() => {
-    const stage = stageRoot.current?.querySelector<HTMLElement>('.canvas-stage');
-    if (!stage) return;
     let size = { width: stage.clientWidth, height: stage.clientHeight };
-    // Camera frames write only this outline's style; React never renders per frame.
+    let painted = '';
+    // Camera frames repaint the cards only when the map's extent changes; React never renders per frame.
     const draw = () => {
-      const frame = viewport.current;
-      if (!frame) return;
       const start = controller.screenToWorld({ x: 0, y: 0 });
       const end = controller.screenToWorld({ x: size.width, y: size.height });
-      const { scale, offsetX, offsetY } = transform.current;
-      frame.style.transform = `translate(${start.x * scale + offsetX}px, ${start.y * scale + offsetY}px)`;
-      frame.style.width = `${(end.x - start.x) * scale}px`;
-      frame.style.height = `${(end.y - start.y) * scale}px`;
+      const view = { x: start.x, y: start.y, width: end.x - start.x, height: end.y - start.y };
+      const fit = minimapFit(nodes, view);
+      const key = `${fit.scale} ${fit.offsetX} ${fit.offsetY}`;
+      if (key !== painted) {
+        painted = key;
+        transform.current = fit;
+        const color =
+          getComputedStyle(target).getPropertyValue('--pc-graph-minimap-node').trim() || 'GrayText';
+        drawCameraOverview(
+          context,
+          {
+            nodes,
+            edges: [],
+            selection: [],
+            style: () => ({ fill: color, stroke: color }),
+            camera: { x: -fit.offsetX / fit.scale, y: -fit.offsetY / fit.scale, zoom: fit.scale },
+            focus: null,
+          },
+          { width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT, devicePixelRatio: ratio },
+        );
+      }
+      const frame = viewport.current;
+      if (!frame) return;
+      frame.style.transform = `translate(${view.x * fit.scale + fit.offsetX}px, ${view.y * fit.scale + fit.offsetY}px)`;
+      frame.style.width = `${view.width * fit.scale}px`;
+      frame.style.height = `${view.height * fit.scale}px`;
+    };
+    const repaint = () => {
+      painted = '';
+      draw();
     };
     const observer = new ResizeObserver(() => {
       size = { width: stage.clientWidth, height: stage.clientHeight };
       draw();
     });
     observer.observe(stage);
+    const theme = new MutationObserver(repaint);
+    theme.observe(document.documentElement, { attributes: true });
     draw();
     const off = controller.on('camera', draw);
     return () => {
       off();
       observer.disconnect();
+      theme.disconnect();
     };
-  }, [controller, stageRoot]);
+  }, [controller, stageRoot, nodes]);
   if (mobile) return null;
   return (
     <button
