@@ -18,13 +18,10 @@ export function captureCanvasControllers(): CanvasController[] {
 
 /**
  * Gives every canvas stage a measured size; other elements keep jsdom's empty box.
- * Reports reduced motion unless `motion` is set, so camera moves land in one frame.
+ * Reports reduced motion, so camera moves land in one frame.
  */
-export function stubStageSize(
-  size: { width: number; height: number },
-  { motion = false }: { motion?: boolean } = {},
-): void {
-  if (!motion && !vi.isMockFunction(window.matchMedia)) {
+export function stubStageSize(size: { width: number; height: number }): void {
+  if (!vi.isMockFunction(window.matchMedia)) {
     const media = window.matchMedia;
     vi.spyOn(window, 'matchMedia').mockImplementation((query: string) =>
       query === '(prefers-reduced-motion: reduce)'

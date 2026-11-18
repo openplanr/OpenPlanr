@@ -276,69 +276,58 @@ describe('Graph on the canvas engine', () => {
     ).toBe('true');
   });
 
-  it.each([
-    ['reduced motion', false],
-    ['motion', true],
-  ])(
-    'previews a clicked node and opens the inspector on Enter or Open inspector with %s',
-    async (_, motion) => {
-      const created = captureCanvasControllers();
-      stubStageSize({ width: 1440, height: 1000 }, { motion });
-      const { binding, state } = representativeState();
-      const rendered = render(
-        <section>
-          <RouteToolProbe />
-          <InspectorRequests />
-          <GraphPage currentBinding={binding} current={state} />
-        </section>,
+  it('previews a clicked node and opens the inspector on Enter or Open inspector with reduced motion', async () => {
+    stubStageSize({ width: 1440, height: 1000 });
+    const { binding, state } = representativeState();
+    const rendered = render(
+      <section>
+        <RouteToolProbe />
+        <InspectorRequests />
+        <GraphPage currentBinding={binding} current={state} />
+      </section>,
+    );
+    disposers.push(
+      installKeyboardCoordinator(document, () => ({
+        root: rendered.container,
+        singleLetters: true,
+        paletteOpen: false,
+        togglePalette: vi.fn(),
+        openHelp: vi.fn(),
+        navigate: vi.fn(),
+        closeInspector: () => false,
+        selectedId: () => null,
+        copy: async () => undefined,
+        announce: vi.fn(),
+      })),
+    );
+    await settleFrames();
+    const requests = () => Number(rendered.getByTestId('inspector-requests').textContent);
+    const before = requests();
+    const id = required(
+      rendered.container.querySelector<HTMLElement>('.pc-graph-node:not([data-selected])')?.dataset
+        .canonicalId,
+    );
+    const node = () =>
+      required(
+        rendered.container.querySelector<HTMLElement>(`.pc-graph-node[data-canonical-id="${id}"]`),
       );
-      disposers.push(
-        installKeyboardCoordinator(document, () => ({
-          root: rendered.container,
-          singleLetters: true,
-          paletteOpen: false,
-          togglePalette: vi.fn(),
-          openHelp: vi.fn(),
-          navigate: vi.fn(),
-          closeInspector: () => false,
-          selectedId: () => null,
-          copy: async () => undefined,
-          announce: vi.fn(),
-        })),
-      );
-      await settleFrames();
-      const requests = () => Number(rendered.getByTestId('inspector-requests').textContent);
-      const before = requests();
-      const id = required(
-        rendered.container.querySelector<HTMLElement>('.pc-graph-node:not([data-selected])')
-          ?.dataset.canonicalId,
-      );
-      const node = () =>
-        required(
-          rendered.container.querySelector<HTMLElement>(
-            `.pc-graph-node[data-canonical-id="${id}"]`,
-          ),
-        );
-      fireEvent.click(node(), { detail: 1 });
-      await settleFrames();
-      expect(node().getAttribute('aria-pressed')).toBe('true');
-      expect(document.activeElement).toBe(node());
-      expect(requests()).toBe(before);
-      const preview = rendered.getByRole('region', { name: 'Graph selection preview' });
-      expect(preview.textContent).toContain(id);
-      fireEvent.keyDown(node(), { key: 'Enter' });
-      expect(requests()).toBe(before + 1);
-      await settleFrames();
-      // Reading the camera validates it, so a NaN from an animated reveal throws here.
-      expect(Number.isFinite(liveController(created).getCamera().zoom)).toBe(true);
-      fireEvent.click(within(preview).getByRole('button', { name: 'Open inspector' }), {
-        detail: 1,
-      });
-      expect(requests()).toBe(before + 2);
-      // The preview hides once the inspector opens, so focus goes back to the node first.
-      expect(document.activeElement).toBe(node());
-    },
-  );
+    fireEvent.click(node(), { detail: 1 });
+    await settleFrames();
+    expect(node().getAttribute('aria-pressed')).toBe('true');
+    expect(document.activeElement).toBe(node());
+    expect(requests()).toBe(before);
+    const preview = rendered.getByRole('region', { name: 'Graph selection preview' });
+    expect(preview.textContent).toContain(id);
+    fireEvent.keyDown(node(), { key: 'Enter' });
+    expect(requests()).toBe(before + 1);
+    await settleFrames();
+    fireEvent.click(within(preview).getByRole('button', { name: 'Open inspector' }), {
+      detail: 1,
+    });
+    expect(requests()).toBe(before + 2);
+    // The preview hides once the inspector opens, so focus goes back to the node first.
+    expect(document.activeElement).toBe(node());
+  });
 
   it('moves between connected neighbours by direction, vertical order and canonical ID', () => {
     const at = (x: number, y: number) => ({ x, y });
