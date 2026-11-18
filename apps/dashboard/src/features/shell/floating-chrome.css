@@ -28,6 +28,21 @@
     --pc-gutter: 16px;
   }
 }
+/* Every page scroller, including the local Operate and boot planes, clears a pinned panel. */
+.pc-shell[data-navigation-inset] .pc-shell__scroll {
+  padding-left: calc(
+    var(--canvas-chrome-inset) +
+    var(--canvas-chrome-navigation-width) +
+    var(--pc-gutter)
+  );
+}
+.pc-shell[data-sidebar-inset] .pc-shell__scroll {
+  padding-right: calc(
+    var(--canvas-chrome-inset) +
+    var(--canvas-chrome-sidebar-width) +
+    var(--pc-gutter)
+  );
+}
 .pc-shell[data-shell-layout="floating"] .pc-plane-banner {
   top: 64px;
 }

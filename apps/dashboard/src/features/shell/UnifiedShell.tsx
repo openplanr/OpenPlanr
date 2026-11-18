@@ -48,11 +48,6 @@ const CHROME_STORAGE_NOTICE = {
   set: 'Panel layout could not be saved in this browser. It applies until this page is closed.',
 } as const;
 
-/** Page padding that keeps content beside a pinned panel of the given width variable. */
-function panelInset(width: string): string {
-  return `calc(var(--canvas-chrome-inset) + var(${width}) + var(--pc-gutter))`;
-}
-
 function subscribeToResize(onChange: () => void): () => void {
   if (typeof window === 'undefined') return () => undefined;
   window.addEventListener('resize', onChange);
@@ -426,18 +421,7 @@ function ShellFrame({
                       onRetry={refetchCurrent}
                     />
                   ) : null}
-                  <div
-                    className="pc-shell__scroll"
-                    ref={interactions.scrollRef}
-                    style={{
-                      paddingLeft: navigationInset
-                        ? panelInset('--canvas-chrome-navigation-width')
-                        : undefined,
-                      paddingRight: sidebarInset
-                        ? panelInset('--canvas-chrome-sidebar-width')
-                        : undefined,
-                    }}
-                  >
+                  <div className="pc-shell__scroll" ref={interactions.scrollRef}>
                     {invalidView ? (
                       <p role="status">
                         This view link is invalid or unsupported. Default filters are shown.

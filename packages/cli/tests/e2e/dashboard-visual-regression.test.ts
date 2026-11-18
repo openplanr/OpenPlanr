@@ -212,7 +212,8 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
       await workspace.getByRole('textbox', { name: 'Search query' }).fill('appointment');
       await expect(workspace).toContainText(expectation.readyText);
     }
-    if (!('planningScenario' in options)) {
+    // Scenario and local Operate fixtures replace the content the ready text names.
+    if (!('planningScenario' in options) && !('localOperate' in options)) {
       await expect(workspace).toContainText(expectation.readyText);
     }
     await expect(workspace).not.toContainText('cannot be trusted');

@@ -331,6 +331,20 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
       });
     }
 
+    for (const width of [...WIDTHS, 768]) {
+      test(`keeps local Operate focus stops clear of a pinned sidebar at ${width}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await openFixture(page, '#/operate/today', { localOperate: '1' });
+        const today = page.locator('[data-route-kind="operate.today"]');
+        await expect(today.getByRole('heading', { level: 1 })).toBeVisible();
+        await pinSidebar(page);
+        await expect(page.locator('.pc-shell')).toHaveAttribute('data-sidebar-inset', 'true');
+        expect(await stopsUnderSidebar(page)).toEqual([]);
+      });
+    }
+
     for (const width of WIDTHS) {
       test(`clears focus returning from a dialog to an item under the open sidebar at ${width}`, async ({
         page,
