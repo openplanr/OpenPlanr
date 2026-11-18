@@ -1232,7 +1232,11 @@ test.describe('dashboard real-browser quality', () => {
     const overlay = await page.locator('[data-chrome-slot="sidebar"]').boundingBox();
     if (!overlay) throw new Error('Missing floating sidebar.');
     expect(overlay.x).toBeLessThan(before.main.x + before.main.width);
-    expect(before.main.x + before.main.width - (overlay.x + overlay.width)).toBe(12);
+    // The sidebar sits 12 px inside the scroller's inner edge, clear of a classic scrollbar.
+    const inner = await scroll.evaluate(
+      (element) => element.getBoundingClientRect().left + element.clientLeft + element.clientWidth,
+    );
+    expect(inner - (overlay.x + overlay.width)).toBe(12);
     await expect(inspector.locator('[data-artifact-id="QT-071"]')).toHaveAttribute(
       'data-detail-state',
       'ready',
