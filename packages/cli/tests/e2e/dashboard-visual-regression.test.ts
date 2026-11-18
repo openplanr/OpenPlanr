@@ -226,6 +226,19 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
   expect(responseErrors, `API errors while loading ${route}`).toEqual([]);
 }
 
+/** Opens a sibling page whose scrollers draw a 15 px classic scrollbar, as on Linux and Windows. */
+async function openClassicScrollbarPage(page: Page): Promise<Page> {
+  const classic = await page.context().newPage();
+  await classic.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
+      document.head.append(style);
+    });
+  });
+  return classic;
+}
+
 async function layoutReport(page: Page) {
   return page.evaluate((activeTargetSelector) => {
     const horizontalOverflow =
@@ -4320,39 +4333,48 @@ test.describe('dashboard real-browser quality', () => {
   });
 
   test('keeps the selection bar clear of the floating help button on tablets', async ({ page }) => {
-    for (const viewport of [
-      { width: 768, height: 1024 },
-      { width: 844, height: 390 },
-      { width: 600, height: 900 },
-      { width: 899, height: 900 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await page.goto(fixtureUrl('#/home', { dataset: 'representative' }));
-      const home = page.locator('[data-route-kind="planning.overview"]');
+    const classic = await openClassicScrollbarPage(page);
+    for (const [target, viewport] of [page, classic].flatMap((target) =>
+      [
+        { width: 768, height: 1024 },
+        { width: 844, height: 390 },
+        { width: 600, height: 900 },
+        { width: 899, height: 900 },
+      ].map((viewport) => [target, viewport] as const),
+    )) {
+      await target.setViewportSize(viewport);
+      await target.goto(fixtureUrl('#/home', { dataset: 'representative' }));
+      const home = target.locator('[data-route-kind="planning.overview"]');
       await expect(home.locator('.pc-home__row').first()).toBeVisible();
       await home.locator('.pc-home__row .pc-artifact-row__link').first().focus();
-      const bar = page.locator('.pc-selection-bar');
+      const bar = target.locator('.pc-selection-bar');
       await expect(bar).toBeVisible();
-      const report = await page.evaluate(() => {
+      const report = await target.evaluate(() => {
         const help = document.querySelector('[data-chrome-slot="help"]')?.getBoundingClientRect();
         const box = document.querySelector('.pc-selection-bar')?.getBoundingClientRect();
-        if (!help || !box) throw new Error('Missing help button or selection bar');
+        const scroller = document.querySelector<HTMLElement>('.pc-shell__scroll');
+        if (!help || !box || !scroller) throw new Error('Missing help, selection bar or scroller');
         const hit = document.elementFromPoint(
           help.left + help.width / 2,
           help.top + help.height / 2,
         );
         return {
+          scrollbar: scroller.offsetWidth - scroller.clientWidth,
           right: box.right,
           helpLeft: help.left,
           bottom: window.innerHeight - box.bottom,
           helpOnTop: Boolean(hit?.closest('[data-chrome-slot="help"]')),
         };
       });
-      const context = `${viewport.width}x${viewport.height}`;
-      expect(report.right, `bar left of help at ${context}`).toBeLessThanOrEqual(report.helpLeft);
+      const context = `${viewport.width}x${viewport.height}${target === classic ? ' with a classic scrollbar' : ''}`;
+      if (target === classic) expect(report.scrollbar, `scrollbar at ${context}`).toBe(15);
+      expect(report.right, `bar 12 px left of help at ${context}`).toBeLessThanOrEqual(
+        report.helpLeft - 12,
+      );
       expect(report.helpOnTop, `help reachable beside the bar at ${context}`).toBe(true);
       expect(report.bottom, `bar inset from the bottom at ${context}`).toBeGreaterThanOrEqual(12);
     }
+    await classic.close();
   });
 
   test('centres a one-row selection bar below open panels from 768 to 1440 px', async ({
@@ -4436,14 +4458,7 @@ test.describe('dashboard real-browser quality', () => {
           }),
         };
       }, selectors);
-    const classic = await page.context().newPage();
-    await classic.addInitScript(() => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
-        document.head.append(style);
-      });
-    });
+    const classic = await openClassicScrollbarPage(page);
     const rightChrome = ['[data-chrome-slot="action"]', '[data-chrome-slot="help"]'];
     for (const target of [page, classic]) {
       for (const [width, height, gutter] of [

@@ -2931,7 +2931,7 @@ button.pc-work-item:disabled {
   align-items: center;
   gap: 10px;
   box-sizing: border-box;
-  max-width: calc(100vw - 128px);
+  max-width: calc(100vw - 128px - 2 * var(--pc-chrome-gutter, 0px));
   height: 40px;
   padding: 0 6px 0 12px;
   border: 1px solid var(--op-line3);
