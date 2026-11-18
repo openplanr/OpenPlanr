@@ -41,6 +41,12 @@ export function EvidencePage({ currentBinding, current }: EvidencePageProps) {
       data-route-kind={model.detailRequested ? 'operate.evidence-item' : 'operate.evidence'}
       data-audit-presentation={model.presentation}
     >
+      <SectionHeader
+        headingLevel={1}
+        eyebrow="planr-operate · evidence"
+        title={model.detailRequested ? 'Evidence item' : 'Evidence'}
+        description="See what supports or challenges the work."
+      />
       <ul className="pc-metrics" aria-label="Evidence">
         <MetricStat label="rows" value={evidence.length} />
         {model.detailRequested ? null : (
@@ -50,12 +56,6 @@ export function EvidencePage({ currentBinding, current }: EvidencePageProps) {
           </>
         )}
       </ul>
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="planr-operate · evidence"
-        title={model.detailRequested ? 'Evidence item' : 'Evidence'}
-        description="See what supports or challenges the work."
-      />
       <DefinitionGrid
         items={[
           { term: 'Event record', description: head, mono: true },

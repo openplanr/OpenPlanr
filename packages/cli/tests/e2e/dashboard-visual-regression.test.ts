@@ -4326,6 +4326,37 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('puts the Operate page title before its metric tiles at every width', async ({ page }) => {
+    const routes = [
+      '#/operate/actions',
+      '#/operate/cycles',
+      '#/operate/evidence',
+      '#/operate/outcomes',
+      '#/operate/history',
+    ];
+    for (const width of [1440, 600, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const route of routes) {
+        await openFixture(page, route);
+        const workspace = page.locator('.pc-operate');
+        const title = await workspace.getByRole('heading', { level: 1 }).boundingBox();
+        const metrics = await workspace.locator('.pc-metrics').first().boundingBox();
+        if (!title || !metrics)
+          throw new Error(`Missing title or metrics on ${route} at ${width}.`);
+        expect(metrics.y, `metrics below the title on ${route} at ${width}`).toBeGreaterThan(
+          title.y + title.height,
+        );
+        if (width < 600) {
+          const bar = await page.locator('header.pc-topbar').boundingBox();
+          if (!bar) throw new Error(`Missing the phone top bar on ${route}.`);
+          expect(title.y, `title clear of the top bar on ${route}`).toBeGreaterThan(
+            bar.y + bar.height,
+          );
+        }
+      }
+    }
+  });
+
   test('shows the List count beside the view name from 600 to 899', async ({ page }) => {
     for (const width of [1440, 1199, 900, 899, 768, 600, 599, 390]) {
       await page.setViewportSize({ width, height: 900 });

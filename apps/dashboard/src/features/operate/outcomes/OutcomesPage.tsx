@@ -65,17 +65,17 @@ export function OutcomesPage({ currentBinding, current }: OutcomesPageProps) {
       data-route-kind="operate.outcomes"
       data-audit-presentation={model.presentation}
     >
-      <ul className="pc-metrics" aria-label="Outcomes">
-        <MetricStat label="domain metrics" value={model.domainMetrics.length} />
-        <MetricStat label="outcomes" value={model.outcomes.length} />
-        <MetricStat label="learnings" value={model.learnings.length} />
-      </ul>
       <SectionHeader
         headingLevel={1}
         eyebrow="planr-operate · outcomes"
         title="Outcomes"
         description="Track results, measurements, and what the team learned."
       />
+      <ul className="pc-metrics" aria-label="Outcomes">
+        <MetricStat label="domain metrics" value={model.domainMetrics.length} />
+        <MetricStat label="outcomes" value={model.outcomes.length} />
+        <MetricStat label="learnings" value={model.learnings.length} />
+      </ul>
       <DefinitionGrid
         items={[
           { term: 'Event record', description: head, mono: true },
