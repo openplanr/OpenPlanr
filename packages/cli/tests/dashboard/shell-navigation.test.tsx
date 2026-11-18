@@ -699,7 +699,7 @@ it.each([1024, 1440])('offers only the Outline tab without a selection at %s px'
 });
 
 it.each(['#/graph', '#/operate/today'])(
-  'lists every destination with its section in the navigation panel and main menu on %s',
+  'lists every destination in the navigation panel and only tools in the main menu on %s',
   (hash) => {
     renderNamedShell(1440, hash);
     const navigation = screen.getByRole('navigation', { name: 'Navigation' });
@@ -715,17 +715,23 @@ it.each(['#/graph', '#/operate/today'])(
     ).toEqual(['Plan', 'Operate', 'Record', 'Reference']);
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     const menu = screen.getByRole('menu', { name: 'Main menu' });
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .slice(0, DESTINATIONS.length)
-        .map((item) => item.textContent),
-    ).toEqual(DESTINATIONS);
+    const items = within(menu)
+      .getAllByRole('menuitem')
+      .map((item) => computeAccessibleName(item));
+    for (const destination of DESTINATIONS) expect(items).not.toContain(destination);
+    for (const tool of ['Search or run', 'Find in this view', 'Keyboard shortcuts', 'Theme: '])
+      expect(items.some((name) => name.startsWith(tool))).toBe(true);
     expect(
       within(menu)
         .getAllByRole('group')
         .map((group) => group.getAttribute('aria-label')),
-    ).toEqual(['Plan', 'Operate', 'Record', 'Reference', 'Tools and preferences']);
+    ).toEqual(['Tools and preferences']);
+    fireEvent.keyDown(menu, { key: 'Escape' });
+    const label = hash === '#/graph' ? 'Graph' : 'Today';
+    fireEvent.click(screen.getByRole('button', { name: `${label}: show navigation` }));
+    expect(
+      document.querySelector('[data-chrome-slot="navigation"]')?.getAttribute('data-open'),
+    ).toBe('true');
   },
 );
 

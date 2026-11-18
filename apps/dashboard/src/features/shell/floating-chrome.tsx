@@ -48,7 +48,6 @@ import {
   ConnectionChip,
   type DetailTrail,
   NavigationSections,
-  navigationSections,
   THEME_STORAGE_ERROR,
   type ThemePreferenceAdapter,
   TOPBAR_ROUTE_COUNT_ID,
@@ -141,7 +140,6 @@ export type FloatingChromeProps = Readonly<{
   }>;
   themePreference?: ThemePreferenceAdapter;
   main: RefObject<HTMLElement | null>;
-  navigate: (href: string) => void;
   onOpenPalette: () => void;
   onOpenHelp: () => void;
 }>;
@@ -236,7 +234,6 @@ function MainMenu({
   route,
   detailTrail,
   themePreference,
-  navigate,
   onOpenPalette,
   onOpenHelp,
   main,
@@ -279,23 +276,6 @@ function MainMenu({
       }
     >
       <Menu label="Main menu">
-        {navigationSections(route).map((section) => (
-          // biome-ignore lint/a11y/useSemanticElements: a menu groups its items with role="group"; a fieldset is a form control group.
-          <div key={section.label} role="group" aria-label={section.label}>
-            <span className="pc-chrome-label" aria-hidden="true">
-              {section.label}
-            </span>
-            {section.items.map((item) => (
-              <MenuItem
-                key={item.kind}
-                icon={<PcIcon name={item.icon} size={15} />}
-                onClick={() => navigate(item.href)}
-              >
-                {item.label}
-              </MenuItem>
-            ))}
-          </div>
-        ))}
         {/* biome-ignore lint/a11y/useSemanticElements: a menu groups its items with role="group"; a fieldset is a form control group. */}
         <div role="group" aria-label="Tools and preferences">
           <span className="pc-chrome-label" aria-hidden="true">

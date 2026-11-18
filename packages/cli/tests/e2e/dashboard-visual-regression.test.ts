@@ -807,13 +807,13 @@ test.describe('dashboard real-browser quality', () => {
       await expect(toolbar.getByRole('button', { name: /^Search or run/u })).toBeVisible();
       await expect(toolbar.getByRole('button', { name: 'More tools' })).toBeVisible();
     }
-    // The menu still lists every Operate place.
-    await page
-      .locator('.canvas-chrome-root [data-chrome-slot="menu"]')
-      .getByRole('button', { name: 'Menu', exact: true })
-      .click();
+    // The navigation panel behind the view name still lists every Operate place.
+    await page.getByRole('button', { name: 'Today: show navigation', exact: true }).click();
+    const navigation = page.getByRole('navigation', { name: 'Navigation' });
     for (const place of ['Today', 'Inbox', 'Actions', 'Cycles', 'Evidence', 'Outcomes'])
-      await expect(page.getByRole('menuitem', { name: place, exact: true })).toBeVisible();
+      await expect(
+        navigation.getByRole('link', { name: new RegExp(`^${place}( \\d+)?$`, 'u') }),
+      ).toBeVisible();
   });
 
   test('renders the pending Review from exact GET-only reads without mutation or private custody', async ({
@@ -4229,11 +4229,19 @@ test.describe('dashboard real-browser quality', () => {
       await page.getByRole('button', { name: 'Menu', exact: true }).click();
       const menu = page.getByRole('menu', { name: 'Main menu' });
       await expect(menu).toBeVisible();
-      for (const name of ['Home', 'Graph', 'Inbox', 'Evidence', 'Console', 'Diagnostics'])
-        await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
-      await menu.getByRole('menuitem', { name: 'Console', exact: true }).click();
-      await expect(page.locator('[data-route-kind="planning.console"]')).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Keyboard shortcuts' })).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Home', exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
       await expect(menu).toBeHidden();
+      // Destinations live in the navigation panel behind the view name.
+      await page.locator('[data-chrome-slot="menu"] .canvas-chrome-view-picker button').click();
+      const navigation = page.getByRole('navigation', { name: 'Navigation' });
+      for (const name of ['Home', 'Graph', 'Inbox', 'Evidence', 'Console', 'Diagnostics'])
+        await expect(
+          navigation.getByRole('link', { name: new RegExp(`^${name}( \\d+)?$`, 'u') }),
+        ).toBeVisible();
+      await navigation.getByRole('link', { name: /^Console( \d+)?$/u }).click();
+      await expect(page.locator('[data-route-kind="planning.console"]')).toBeVisible();
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     }
     await page.setViewportSize({ width: 599, height: 900 });
