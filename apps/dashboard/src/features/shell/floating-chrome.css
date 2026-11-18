@@ -47,6 +47,31 @@
   top: 64px;
 }
 
+.pc-shell__scrollbar-probe {
+  position: absolute;
+  top: 0;
+  left: -200px;
+  width: 100px;
+  height: 100px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* Right-anchored chrome clears the page scroller's classic scrollbar; a canvas stage covers it. */
+.pc-shell:not([data-canvas-route]) {
+  --pc-chrome-gutter: var(--pc-scrollbar-width);
+}
+.pc-chrome .canvas-chrome-action,
+.pc-chrome .canvas-chrome-sidebar,
+.pc-chrome .canvas-chrome-help {
+  right: calc(
+    var(--canvas-chrome-inset) +
+    var(--pc-chrome-gutter, 0px) +
+    env(safe-area-inset-right)
+  );
+}
+
 .pc-chrome .canvas-chrome-panel-surface {
   border-radius: 14px;
 }
@@ -136,7 +161,7 @@
 .pc-chrome .pc-help-card {
   position: fixed;
   top: auto;
-  right: 12px;
+  right: calc(12px + var(--pc-chrome-gutter, 0px));
   bottom: 64px;
   left: auto;
   display: grid;

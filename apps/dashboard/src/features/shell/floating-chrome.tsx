@@ -66,6 +66,7 @@ export {
   useCloseUnpinnedPanels,
 } from './floating-chrome-parts.js';
 export { useCanvasRoute } from './route-tools.js';
+export { ScrollbarProbe } from './scrollbar-probe.js';
 
 /** Widest viewport that keeps the phone top bar and bottom navigation. */
 export const PHONE_MAX_WIDTH = 599;

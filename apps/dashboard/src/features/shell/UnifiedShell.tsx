@@ -11,6 +11,7 @@ import {
   FloatingChrome,
   NAVIGATION_PANEL,
   PHONE_MAX_WIDTH,
+  ScrollbarProbe,
   ShellChromeProvider,
   SIDEBAR_PANEL,
   useCanvasRoute,
@@ -297,6 +298,7 @@ function ShellFrame({
         className="pc-shell"
         data-dashboard-build-id={buildId}
         data-shell-layout={phone ? 'phone' : 'floating'}
+        data-canvas-route={canvasRoute || undefined}
         data-navigation-inset={navigationInset || undefined}
         data-sidebar-inset={sidebarInset || undefined}
         data-product={route.product ?? 'system'}
@@ -314,6 +316,7 @@ function ShellFrame({
         >
           Skip to main content
         </a>
+        <ScrollbarProbe />
         {phone ? null : (
           <FloatingChrome
             key={chromeKey}

@@ -4416,35 +4416,106 @@ test.describe('dashboard real-browser quality', () => {
   });
 
   test('insets content and draws panels and help as the chrome artboards', async ({ page }) => {
-    for (const [width, height, gutter] of [
-      [1440, 1000, 24],
-      [1024, 768, 24],
-      [768, 1024, 16],
-      [390, 844, 16],
-    ] as const) {
-      await page.setViewportSize({ width, height });
-      await page.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
-      const frame = page.locator('#main-content .op-route-frame');
-      await expect(frame).toBeVisible();
-      const box = await frame.evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return { left: rect.left, right: window.innerWidth - rect.right };
+    // Content and right chrome are measured from the page scroller's inner edge, clear of its scrollbar.
+    const edges = (target: Page, selectors: readonly string[]) =>
+      target.evaluate((selectors) => {
+        const frame = document.querySelector('#main-content .op-route-frame');
+        const scroller = frame?.closest('.pc-shell__scroll');
+        if (!frame || !scroller)
+          throw new Error('The route frame is not inside .pc-shell__scroll.');
+        const outer = scroller.getBoundingClientRect();
+        const inner = outer.left + scroller.clientLeft + scroller.clientWidth;
+        const content = frame.getBoundingClientRect();
+        return {
+          left: content.left,
+          right: inner - content.right,
+          scrollbar: outer.width - scroller.clientWidth,
+          chrome: selectors.map((selector) => {
+            const element = document.querySelector(selector);
+            return element ? inner - element.getBoundingClientRect().right : null;
+          }),
+        };
+      }, selectors);
+    const classic = await page.context().newPage();
+    await classic.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
+        document.head.append(style);
       });
-      expect(box, `content gutters at ${width}`).toEqual({ left: gutter, right: gutter });
+    });
+    const rightChrome = ['[data-chrome-slot="action"]', '[data-chrome-slot="help"]'];
+    for (const target of [page, classic]) {
+      for (const [width, height, gutter] of [
+        [1440, 1000, 24],
+        [1024, 768, 24],
+        [768, 1024, 16],
+        [390, 844, 16],
+      ] as const) {
+        await target.setViewportSize({ width, height });
+        await target.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
+        await expect(target.locator('#main-content .op-route-frame')).toBeVisible();
+        const floating = width >= 600;
+        await expect
+          .poll(() => edges(target, rightChrome), { message: `content gutters at ${width}` })
+          .toEqual({
+            left: gutter,
+            right: gutter,
+            scrollbar: target === classic ? 15 : expect.any(Number),
+            chrome: floating ? [12, 12] : [null, null],
+          });
+      }
     }
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
-    await page.locator('#main-content').focus();
-    await page.keyboard.press('Alt+BracketRight');
-    const surface = page.locator('[data-chrome-slot="sidebar"] .canvas-chrome-panel-surface');
+    await classic.setViewportSize({ width: 1440, height: 1000 });
+    await classic.goto(fixtureUrl('#/home', { dataset: 'artboard' }));
+    await classic.locator('#main-content').focus();
+    await classic.keyboard.press('Alt+BracketRight');
+    const surface = classic.locator('[data-chrome-slot="sidebar"] .canvas-chrome-panel-surface');
     await expect(surface).toHaveCSS('border-radius', '14px');
-    await page.locator('[data-chrome-slot="help"] button').click();
-    const help = page.getByRole('dialog', { name: 'Help and status' });
+    await expect
+      .poll(() => edges(classic, ['[data-chrome-slot="sidebar"]']))
+      .toMatchObject({
+        scrollbar: 15,
+        chrome: [12],
+      });
+    await classic.locator('[data-chrome-slot="help"] button').click();
+    const help = classic.getByRole('dialog', { name: 'Help and status' });
     await expect(help).toBeVisible();
     const bottom = await help.evaluate(
       (element) => window.innerHeight - element.getBoundingClientRect().bottom,
     );
     expect(bottom).toBe(64);
+    expect((await edges(classic, ['.pc-help-card'])).chrome).toEqual([12]);
+    // The Graph stage covers the scroller, so its right chrome keeps the plain inset.
+    for (const [width, height] of [
+      [1440, 1000],
+      [1024, 768],
+      [768, 1024],
+    ] as const) {
+      await classic.setViewportSize({ width, height });
+      await classic.goto(fixtureUrl('#/graph', { dataset: 'artboard' }));
+      await expect(classic.locator('.pc-graph-minimap')).toBeVisible();
+      await expect
+        .poll(
+          () =>
+            classic.evaluate(() => {
+              const box = (selector: string) => {
+                const element = document.querySelector(selector);
+                if (!element) throw new Error(`${selector} is missing on the Graph.`);
+                return element.getBoundingClientRect();
+              };
+              const help = box('[data-chrome-slot="help"]');
+              return {
+                action: window.innerWidth - box('[data-chrome-slot="action"]').right,
+                help: window.innerWidth - help.right,
+                minimapGap: help.left - box('.pc-graph-minimap').right,
+              };
+            }),
+          { message: `Graph right chrome at ${width}` },
+        )
+        .toEqual({ action: 12, help: 12, minimapGap: 12 });
+    }
+    await classic.close();
   });
 
   test('keeps accent for active and pressed controls only', async ({ page }) => {
