@@ -928,8 +928,11 @@
   font-family: var(--pc-font-mono);
 }
 
+/* Each word wraps as a unit and breaks inside itself only when wider than the line. */
 .pc-command-text > span {
-  white-space: nowrap;
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .pc-command-hint__command {

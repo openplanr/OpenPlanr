@@ -4367,24 +4367,60 @@ test.describe('dashboard real-browser quality', () => {
 
   test('wraps the command in an unavailable step only between its words', async ({ page }) => {
     for (const { route, width } of [
+      { route: '#/operate/today', width: 320 },
+      { route: '#/operate/today', width: 360 },
       { route: '#/operate/today', width: 375 },
+      { route: '#/operate/today', width: 1440 },
+      { route: '#/operate/recovery', width: 375 },
       { route: '#/operate/recovery', width: 1440 },
     ]) {
       await page.setViewportSize({ width, height: 900 });
       await openFixture(page, route);
       const words = page.locator('.op-governed-reason .pc-command-text > span');
       await expect(words.first(), `command on ${route}`).toBeVisible();
-      const broken = await words.evaluateAll(
-        (spans, viewport) =>
-          spans
-            .filter((span) => {
-              const rects = [...span.getClientRects()];
-              return rects.length !== 1 || rects.some((rect) => rect.right > viewport);
-            })
-            .map((span) => span.textContent),
-        width,
-      );
-      expect(broken, `words split or clipped on ${route} at ${width}`).toEqual([]);
+      const problems = await words.evaluateAll((spans) => {
+        const contentRight = (element: Element) => {
+          const style = getComputedStyle(element);
+          return (
+            element.getBoundingClientRect().left +
+            element.clientLeft +
+            element.clientWidth -
+            Number.parseFloat(style.paddingRight)
+          );
+        };
+        const ancestor = (span: Element, test: (style: CSSStyleDeclaration) => boolean) => {
+          let element = span.parentElement;
+          while (element && !test(getComputedStyle(element))) element = element.parentElement;
+          if (!element) throw new Error(`No matching ancestor for ${span.textContent}.`);
+          return element;
+        };
+        return spans.flatMap((span) => {
+          const word = span.textContent ?? '';
+          const line = ancestor(span, (style) => !style.display.startsWith('inline'));
+          const clip = ancestor(span, (style) => style.overflowX !== 'visible');
+          const lineStyle = getComputedStyle(line);
+          const lineWidth =
+            line.clientWidth -
+            Number.parseFloat(lineStyle.paddingLeft) -
+            Number.parseFloat(lineStyle.paddingRight);
+          const element = span as HTMLElement;
+          const { whiteSpace, maxWidth } = element.style;
+          element.style.whiteSpace = 'nowrap';
+          element.style.maxWidth = 'none';
+          const single = element.getBoundingClientRect();
+          element.style.whiteSpace = whiteSpace;
+          element.style.maxWidth = maxWidth;
+          const rects = [...span.getClientRects()];
+          const box = span.getBoundingClientRect();
+          const found: string[] = [];
+          if (rects.length !== 1 || (single.width <= lineWidth && box.height > single.height + 1))
+            found.push(`${word} split`);
+          if (box.right > Math.min(contentRight(line), contentRight(clip)) + 0.5)
+            found.push(`${word} overflows`);
+          return found;
+        });
+      });
+      expect(problems, `command words on ${route} at ${width}`).toEqual([]);
     }
   });
 
