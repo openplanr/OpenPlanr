@@ -780,6 +780,42 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('folds the Operate tool pill clear of its neighbours from 900 to 915 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 900, height: 900 });
+    await openFixture(page, '#/operate/today');
+    const toolbar = page.locator('.canvas-chrome-root [data-chrome-slot="toolbar"]');
+    for (const width of [900, 905, 910, 915]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      // The place tabs do not fit beside the menu and action pills here, so the pill folds them.
+      await expect(toolbar.locator('.pc-operate-places'), `${width} px`).toBeHidden();
+      const gaps = await page.evaluate(() => {
+        const box = (name: string) => {
+          const slot = document.querySelector(`.canvas-chrome-root [data-chrome-slot="${name}"]`);
+          if (!slot) throw new Error(`Missing ${name} pill.`);
+          return slot.getBoundingClientRect();
+        };
+        const tools = box('toolbar');
+        return { menu: tools.left - box('menu').right, action: box('action').left - tools.right };
+      });
+      expect(gaps.menu, `menu gap at ${width} px`).toBeGreaterThanOrEqual(12);
+      expect(gaps.action, `action gap at ${width} px`).toBeGreaterThanOrEqual(12);
+      await expect(toolbar.getByRole('button', { name: /^Search or run/u })).toBeVisible();
+      await expect(toolbar.getByRole('button', { name: 'More tools' })).toBeVisible();
+    }
+    // The menu still lists every Operate place.
+    await page
+      .locator('.canvas-chrome-root [data-chrome-slot="menu"]')
+      .getByRole('button', { name: 'Menu', exact: true })
+      .click();
+    for (const place of ['Today', 'Inbox', 'Actions', 'Cycles', 'Evidence', 'Outcomes'])
+      await expect(page.getByRole('menuitem', { name: place, exact: true })).toBeVisible();
+  });
+
   test('renders the pending Review from exact GET-only reads without mutation or private custody', async ({
     page,
   }) => {
