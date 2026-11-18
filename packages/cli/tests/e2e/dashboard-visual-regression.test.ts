@@ -4098,21 +4098,35 @@ test.describe('dashboard real-browser quality', () => {
         if (width >= 600) {
           await expect(page.locator('header.pc-topbar')).toHaveCount(0);
           await expect(page.locator('.pc-mobile-nav')).toHaveCount(0);
-          const boxes = await page.evaluate(() =>
-            Object.fromEntries(
-              ['menu', 'toolbar', 'action', 'help'].map((slot) => {
-                const box = document
-                  .querySelector(`[data-chrome-slot="${slot}"]`)
-                  ?.getBoundingClientRect();
-                return [slot, box && { x: box.x, y: box.y, w: box.width, h: box.height }];
-              }),
-            ),
-          );
+          // Right chrome is measured from the page scroller's inner edge, clear of a classic scrollbar.
+          const { inner, boxes } = await page.evaluate(() => {
+            const scroller = document.querySelector('.pc-shell__scroll');
+            if (!scroller) throw new Error('Missing .pc-shell__scroll');
+            const outer = scroller.getBoundingClientRect();
+            return {
+              inner: outer.left + scroller.clientLeft + scroller.clientWidth,
+              boxes: Object.fromEntries(
+                ['menu', 'toolbar', 'action', 'help'].map((slot) => {
+                  const box = document
+                    .querySelector(`[data-chrome-slot="${slot}"]`)
+                    ?.getBoundingClientRect();
+                  return [slot, box && { x: box.x, y: box.y, w: box.width, h: box.height }];
+                }),
+              ),
+            };
+          });
           expect(boxes.menu, `${route} menu at ${width}`).toMatchObject({ x: 12, y: 12, h: 40 });
           expect(boxes.toolbar, `${route} tool pill at ${width}`).toMatchObject({ y: 12, h: 44 });
           expect(boxes.action?.h, `${route} action pill at ${width}`).toBe(40);
-          expect((boxes.action?.x ?? 0) + (boxes.action?.w ?? 0)).toBe(width - 12);
+          expect(
+            inner - (boxes.action?.x ?? 0) - (boxes.action?.w ?? 0),
+            `${route} action inset at ${width}`,
+          ).toBe(12);
           expect(boxes.help, `${route} help at ${width}`).toMatchObject({ w: 40, h: 40 });
+          expect(
+            inner - (boxes.help?.x ?? 0) - (boxes.help?.w ?? 0),
+            `${route} help inset at ${width}`,
+          ).toBe(12);
           expect((boxes.help?.y ?? 0) + (boxes.help?.h ?? 0)).toBe(900 - 12);
         } else {
           await expect(page.locator('.canvas-chrome-root')).toHaveCount(0);
