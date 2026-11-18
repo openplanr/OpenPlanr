@@ -13,7 +13,7 @@ export {
   ArtifactRowTitle,
   artifactRowStyle,
 } from './artifact-row.js';
-export { CopyLabels } from './command-hint.js';
+export { CommandText, CopyLabels } from './command-hint.js';
 export { AlertDialog, Dialog, Tabs as RadixTabs } from './composite-primitives.js';
 export {
   Badge,

@@ -4326,6 +4326,29 @@ test.describe('dashboard real-browser quality', () => {
     }
   });
 
+  test('wraps the command in an unavailable step only between its words', async ({ page }) => {
+    for (const { route, width } of [
+      { route: '#/operate/today', width: 375 },
+      { route: '#/operate/recovery', width: 1440 },
+    ]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openFixture(page, route);
+      const words = page.locator('.op-governed-reason .pc-command-text > span');
+      await expect(words.first(), `command on ${route}`).toBeVisible();
+      const broken = await words.evaluateAll(
+        (spans, viewport) =>
+          spans
+            .filter((span) => {
+              const rects = [...span.getClientRects()];
+              return rects.length !== 1 || rects.some((rect) => rect.right > viewport);
+            })
+            .map((span) => span.textContent),
+        width,
+      );
+      expect(broken, `words split or clipped on ${route} at ${width}`).toEqual([]);
+    }
+  });
+
   test('puts the Operate page title before its metric tiles at every width', async ({ page }) => {
     const routes = [
       '#/operate/actions',

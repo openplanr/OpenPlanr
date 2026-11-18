@@ -727,6 +727,16 @@ describe('operate actions and recovery UI', () => {
     );
     expect(html).toContain('Recovery is blocked');
     expect(html).toContain('Archive the stale writer lock and retry safely');
+    // The reason describes its control with the whole command, which wraps only between words.
+    expect(
+      screen.getAllByRole('button', {
+        description:
+          "The dashboard can't run recovery steps. To take this one, run openplanr operate recovery clear-stale-lock in your terminal.",
+      }),
+    ).not.toHaveLength(0);
+    expect(html).toContain(
+      '<code class="pc-command-text"><span>openplanr</span> <span>operate</span> <span>recovery</span> <span>clear-stale-lock</span></code>',
+    );
     expect(html).toContain('Prohibited action');
     expect(html).toContain('What support can collect');
   });

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { Fragment, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { PcIcon } from './console-icon.js';
 import { Toast } from './toast.js';
@@ -18,6 +18,25 @@ export function CopyLabels({ idle, current }: { idle: string; current: string })
         </span>
       ))}
     </span>
+  );
+}
+
+/** A command inside prose; lines break only between its words, and it copies as typed. */
+export function CommandText({ command }: Readonly<{ command: string }>) {
+  let offset = 0;
+  return (
+    <code className="pc-command-text">
+      {command.split(' ').map((word) => {
+        const start = offset;
+        offset += word.length + 1;
+        return (
+          <Fragment key={start}>
+            {start ? ' ' : null}
+            <span>{word}</span>
+          </Fragment>
+        );
+      })}
+    </code>
   );
 }
 

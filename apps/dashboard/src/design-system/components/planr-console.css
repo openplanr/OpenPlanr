@@ -924,6 +924,14 @@
 .pc-command-hint[data-size="sm"] .pc-command-hint__row {
   height: 26px;
 }
+.pc-command-text {
+  font-family: var(--pc-font-mono);
+}
+
+.pc-command-text > span {
+  white-space: nowrap;
+}
+
 .pc-command-hint__command {
   display: inline-flex;
   flex: 1;
@@ -2745,6 +2753,9 @@ button.pc-work-item:disabled {
 }
 .op-governed-button[data-variant="secondary"] {
   border-color: var(--op-control-border);
+}
+.op-governed-button[data-variant="secondary"]:disabled {
+  border-color: var(--op-divider);
 }
 .op-governed-button[data-variant="secondary"]:hover:not(:disabled) {
   background: var(--op-raised);
