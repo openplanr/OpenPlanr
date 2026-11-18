@@ -386,8 +386,14 @@ describe('floating chrome keyboard', () => {
     const keys = SHORTCUT_MAP.map(([binding]) => binding);
     for (const action of ['menu', 'sidebar', 'hideChrome'] as const)
       expect(keys).toContain(formatShortcut(defaultChromeKeymap[action]));
-    expect(keys).toContain(
-      `${formatShortcut(defaultChromeKeymap.nextRegion)} / ${formatShortcut(defaultChromeKeymap.previousRegion)}`,
+    const regions = SHORTCUT_MAP.find(
+      ([binding]) =>
+        binding ===
+        `${formatShortcut(defaultChromeKeymap.nextRegion)} / ${formatShortcut(defaultChromeKeymap.previousRegion)}`,
+    );
+    // Past the first or last region the kit leaves the key to the browser instead of wrapping.
+    expect(regions?.[1]).toBe(
+      'Move to the next or previous region; past either end, the key is left to the browser',
     );
   });
 

@@ -61,7 +61,7 @@ export const SHORTCUT_MAP = [
   ['?', 'Open this shortcut help'],
   [
     `${chromeKeys('nextRegion')} / ${chromeKeys('previousRegion')}`,
-    'Move to the next or previous region',
+    'Move to the next or previous region; past either end, the key is left to the browser',
   ],
   [chromeKeys('menu'), 'Open the menu or navigation panel'],
   [chromeKeys('sidebar'), 'Show or hide the sidebar'],
