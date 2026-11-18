@@ -470,14 +470,6 @@
   color: var(--op-muted);
 }
 
-.op-planning--board > .pc-selection-bar {
-  position: absolute;
-  left: 50%;
-  bottom: 24px;
-  margin: 0;
-  transform: translateX(-50%);
-}
-
 .pc-status-board__tabs {
   padding: 12px 16px 0;
   overflow-x: auto;

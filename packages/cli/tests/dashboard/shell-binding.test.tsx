@@ -59,9 +59,7 @@ describe('dashboard shell binding summary', () => {
     );
 
     expect(container.querySelector('.op-binding-passport')).toBeNull();
-    expect(container.querySelector('.pc-topbar__end')?.textContent).toContain(
-      'Live · watching .planr/',
-    );
+    expect(container.querySelector('.pc-chrome-live')?.textContent).toBe('Live');
     expect(container.textContent).not.toContain('Ready to review');
     expect(container.textContent).not.toContain('Workspace details');
     expect(container.textContent).not.toContain('owner-bound');

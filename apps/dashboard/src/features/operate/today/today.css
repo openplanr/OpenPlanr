@@ -646,9 +646,6 @@
   .pc-topbar:has(.pc-topbar__route-tabs:not(:empty)) {
     grid-template-columns: minmax(0, 1fr) auto 44px;
   }
-  .pc-topbar:has(.pc-topbar__route-tabs:not(:empty)) .pc-topbar__end {
-    width: auto;
-  }
   .pc-topbar__route-tabs .pc-operate-places {
     display: none;
   }

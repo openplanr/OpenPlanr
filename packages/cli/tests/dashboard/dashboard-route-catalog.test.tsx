@@ -11,7 +11,7 @@ import {
   serializeDashboardRoute,
 } from '../../../../apps/dashboard/src/app/router.js';
 import { RouteAnnouncer } from '../../../../apps/dashboard/src/features/accessibility/RouteAnnouncer.js';
-import { NavRail } from '../../../../apps/dashboard/src/features/shell/shell-navigation.js';
+import { NavigationSections } from '../../../../apps/dashboard/src/features/shell/shell-navigation.js';
 import {
   DASHBOARD_FIXTURE_CYCLE_ID,
   DASHBOARD_FIXTURE_REVIEW_ID,
@@ -91,7 +91,7 @@ describe('immutable public dashboard route fixture catalog', () => {
     );
 
     render(
-      <NavRail product="operate" route={route} operateAvailable onOpenPalette={() => undefined} />,
+      <NavigationSections route={route} onOpenPalette={() => undefined} paletteKeys="Ctrl+K" />,
     );
     const cycleLinks = screen.getAllByRole('link', { name: /Cycles/u });
     expect(cycleLinks.length).toBeGreaterThan(0);

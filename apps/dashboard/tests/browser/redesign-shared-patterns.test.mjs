@@ -224,7 +224,7 @@ test('selection actions protect text editing', { timeout: 60_000 }, async (t) =>
   });
 });
 
-test('coarse desktop pointers use the selection sheet', async (t) => {
+test('coarse desktop pointers keep the one-row selection bar with Open', async (t) => {
   const browser = await launchBrowser();
   t.after(() => browser.close());
   const context = await browser.newContext({
@@ -235,6 +235,7 @@ test('coarse desktop pointers use the selection sheet', async (t) => {
   const page = await context.newPage();
   await context.route('**/*', (route) => route.abort());
   await mountBrandGallery(page);
-  for (const row of redesignParityRows.filter((row) => row.viewport === 'M'))
+  for (const row of redesignParityRows.filter((row) => ['S-01', 'S-05'].includes(row.id)))
     await checkRow(page, row, 'dark');
+  assert(await page.locator('.pc-selection-bar__open').isVisible());
 });

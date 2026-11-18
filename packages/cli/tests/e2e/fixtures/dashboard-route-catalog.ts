@@ -25,7 +25,7 @@ const ROUTE_FIXTURES = [
   {
     kind: 'planning.graph',
     hash: '#/graph',
-    readyText: 'Everything outside the focus is hidden, not deleted.',
+    readyText: 'Explore lineage and dependencies. Select a node to inspect its record.',
     composition: 'shell',
   },
   {

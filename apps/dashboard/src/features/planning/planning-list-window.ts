@@ -54,7 +54,7 @@ export function useListKeyboardWindow({
         request as CustomEvent<{ event: KeyboardEvent; target: Element | null }>
       ).detail;
       const row = target?.closest<HTMLElement>('[data-keyboard-item]');
-      const inInspector = target?.closest('.pc-shell-inspector, .pc-inspector-sheet');
+      const inInspector = target?.closest('.canvas-chrome-sidebar, .pc-inspector-sheet');
       if (event.key !== 'Escape' && target?.closest('button, a, [role="tab"]') && !inInspector)
         return;
       const groupKey = row?.closest<HTMLElement>('[data-keyboard-group]')?.dataset.keyboardGroup;
@@ -119,6 +119,11 @@ export {
 } from '../../lib/routing/planning-presentation.js';
 export type { PlanningView } from '../../lib/routing/planning-view-codec.js';
 export { clearInspector, useInspectorStore } from '../shell/inspector-selection.js';
+export {
+  LIST_TOOL_SHORTCUTS,
+  type RouteTool,
+  usePublishRouteTools,
+} from '../shell/route-tools.js';
 export { takeListStatus } from './planning-list-filter.js';
 
 function listScrollElements(root: RefObject<HTMLDivElement | null>) {

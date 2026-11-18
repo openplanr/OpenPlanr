@@ -257,8 +257,10 @@ export function createCanvas(options: CanvasOptions): CanvasController {
   }
   function moveCamera(value: Camera, duration?: number) {
     animation = undefined;
+    // A zero-length animation divides by zero on its first frame, so it lands at once.
     if (
       duration !== undefined &&
+      duration > 0 &&
       view &&
       options.motion !== 'none' &&
       !view.matchMedia?.('(prefers-reduced-motion: reduce)').matches

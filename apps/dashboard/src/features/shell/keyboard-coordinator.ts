@@ -1,3 +1,8 @@
+import { defaultChromeKeymap, formatShortcut } from '@openplanr/canvas/react';
+import { LIST_TOOL_SHORTCUTS, type RouteToolShortcut, runRouteTool } from './route-tools.js';
+
+export { LIST_TOOL_SHORTCUTS } from './route-tools.js';
+
 export type KeyboardContext = Readonly<{
   root: HTMLElement;
   selectionScope?: string;
@@ -11,6 +16,28 @@ export type KeyboardContext = Readonly<{
   copy: (text: string) => Promise<void>;
   announce: (message: string) => void;
 }>;
+
+/** The palette chord; Ctrl replaces Meta outside Apple platforms. */
+export const PALETTE_SHORTCUT: RouteToolShortcut = Object.freeze({
+  code: 'KeyK',
+  key: 'k',
+  metaKey: true,
+});
+export const HELP_SHORTCUT: RouteToolShortcut = Object.freeze({
+  code: 'Slash',
+  key: '?',
+  shiftKey: true,
+});
+
+const LIST_TOOL_IDS: Readonly<Record<string, string>> = Object.freeze({
+  [LIST_TOOL_SHORTCUTS.groupSpec.key]: 'list.group.spec',
+  [LIST_TOOL_SHORTCUTS.groupStatus.key]: 'list.group.status',
+  [LIST_TOOL_SHORTCUTS.groupType.key]: 'list.group.type',
+  [LIST_TOOL_SHORTCUTS.density.key]: 'list.density',
+});
+
+const chromeKeys = (action: keyof typeof defaultChromeKeymap) =>
+  formatShortcut(defaultChromeKeymap[action]);
 
 export const SHORTCUT_MAP = [
   ['Cmd/Ctrl-K', 'Toggle search and focus its query'],
@@ -26,9 +53,19 @@ export const SHORTCUT_MAP = [
     'Home, List, Graph, Board, Sprints, Activity, Operate within one second',
   ],
   ['[ / ]', 'Collapse or expand the active List group'],
-  ['F', 'Focus the selected Graph node'],
+  ['1 / 2 / 3', 'Group the List by spec, status or type'],
+  ['F on List', 'Focus the List filter'],
+  ['D', 'Switch List density'],
+  ['F', 'Fit the Graph selection into view'],
   ['Left/Right, Up/Down', 'Board columns/cards; Graph connected neighbours'],
   ['?', 'Open this shortcut help'],
+  [
+    `${chromeKeys('nextRegion')} / ${chromeKeys('previousRegion')}`,
+    'Move to the next or previous region',
+  ],
+  [chromeKeys('menu'), 'Open the menu or navigation panel'],
+  [chromeKeys('sidebar'), 'Show or hide the sidebar'],
+  [chromeKeys('hideChrome'), 'Focus mode: hide or show the floating chrome'],
   ['Esc', 'Close the top layer, then inspector, then clear Graph focus or selection'],
   ['Tab/Shift-Tab, Home/End', 'Normal traversal; roving menus and tabs retain their own keys'],
   ['Space, Shift-Up/Down', 'Toggle a List row or extend the contiguous selection'],
@@ -76,37 +113,11 @@ function items(root: HTMLElement): HTMLElement[] {
 
 function focusItem(item: HTMLElement, context: KeyboardContext): void {
   item.focus({ preventScroll: true });
-  item.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  // The canvas reveals its focused node; scrolling would offset the clipped stage.
+  if (!item.closest('.canvas-stage'))
+    item.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
   const rows = items(context.root);
   context.announce(`${rows.indexOf(item) + 1} of ${rows.length}`);
-}
-
-function graphNeighbour(
-  current: HTMLElement,
-  rows: HTMLElement[],
-  key: string,
-): HTMLElement | undefined {
-  const ids = (current.dataset.neighbours ?? '').split('\n');
-  const neighbours = rows.filter((row) => ids.includes(row.dataset.keyboardItem ?? ''));
-  const x = Number(current.dataset.x);
-  const y = Number(current.dataset.y);
-  if (key === 'ArrowLeft' || key === 'ArrowRight') {
-    const direction = key === 'ArrowLeft' ? -1 : 1;
-    return neighbours
-      .filter((row) => (Number(row.dataset.x) - x) * direction > 0)
-      .sort(
-        (a, b) =>
-          Math.hypot(Number(a.dataset.x) - x, Number(a.dataset.y) - y) -
-            Math.hypot(Number(b.dataset.x) - x, Number(b.dataset.y) - y) ||
-          (a.dataset.keyboardItem ?? '').localeCompare(b.dataset.keyboardItem ?? ''),
-      )[0];
-  }
-  const ordered = [...neighbours, current].sort(
-    (a, b) =>
-      Number(a.dataset.y) - Number(b.dataset.y) ||
-      (a.dataset.keyboardItem ?? '').localeCompare(b.dataset.keyboardItem ?? ''),
-  );
-  return ordered[ordered.indexOf(current) + (key === 'ArrowUp' ? -1 : 1)];
 }
 
 type CoordinatorState = {
@@ -125,7 +136,32 @@ type KeyStroke = Readonly<{
   command: boolean;
 }>;
 
-const INSPECTOR = '.pc-shell-inspector, .pc-inspector-sheet:not([aria-modal="true"])';
+const INSPECTOR = '.canvas-chrome-sidebar, .pc-inspector-sheet:not([aria-modal="true"])';
+
+let canvasKeys: ((event: KeyboardEvent) => boolean) | null = null;
+
+/** Lets a mounted canvas take its stage keys before the coordinator's own bindings. */
+export function registerCanvasKeys(handle: (event: KeyboardEvent) => boolean): () => void {
+  canvasKeys = handle;
+  return () => {
+    if (canvasKeys === handle) canvasKeys = null;
+  };
+}
+
+// Enter and Escape stay with the coordinator so inspector and Esc precedence are unchanged.
+function canvasKey(stroke: KeyStroke): boolean {
+  const { event, target } = stroke;
+  if (
+    !canvasKeys ||
+    event.key === 'Escape' ||
+    event.key === 'Enter' ||
+    !target?.closest('.canvas-stage') ||
+    !canvasKeys(event)
+  )
+    return false;
+  event.stopPropagation();
+  return true;
+}
 const ARROWS = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'];
 
 function consume(event: KeyboardEvent): void {
@@ -164,7 +200,12 @@ function topKeyboardLayer(document: Document): HTMLElement | undefined {
 }
 
 function paletteChord(stroke: KeyStroke): boolean {
-  return stroke.command && !stroke.event.altKey && !stroke.event.shiftKey && stroke.key === 'k';
+  return (
+    stroke.command &&
+    !stroke.event.altKey &&
+    !stroke.event.shiftKey &&
+    stroke.key === PALETTE_SHORTCUT.key
+  );
 }
 
 function targetOwnsKeys(stroke: KeyStroke, layer: HTMLElement | undefined): boolean {
@@ -207,14 +248,19 @@ function navigateSequence(stroke: KeyStroke, state: CoordinatorState): boolean {
   return true;
 }
 
-function focusFilter(context: KeyboardContext): void {
+/** Focuses the current view's filter field, or opens search when the view has none. */
+export function focusViewFilter(root: HTMLElement, openSearch: () => void): void {
   const filter = Array.from(
-    context.root.querySelectorAll<HTMLInputElement>(
+    root.querySelectorAll<HTMLInputElement>(
       'input[type="search"], input[aria-label*="Filter"], input[aria-label*="filter"], input[aria-label="Search query"]',
     ),
   ).find(visible);
   if (filter) filter.focus();
-  else context.togglePalette();
+  else openSearch();
+}
+
+function focusFilter(context: KeyboardContext): void {
+  focusViewFilter(context.root, context.togglePalette);
 }
 
 function focusedCanonicalId(target: Element | null): string | null {
@@ -292,7 +338,7 @@ function globalShortcut(stroke: KeyStroke, state: CoordinatorState): boolean {
       consume(stroke.event);
       state.goAt = stroke.event.timeStamp;
       return true;
-    case '?':
+    case HELP_SHORTCUT.key:
       consume(stroke.event);
       stroke.context.openHelp();
       return true;
@@ -316,20 +362,10 @@ function routeIs(context: KeyboardContext, route: string): boolean {
   return Boolean(context.root.querySelector(`[data-route-kind="planning.${route}"]`));
 }
 
-function focusGraph(stroke: KeyStroke, current: HTMLElement | undefined): void {
+function fitGraphSelection(stroke: KeyStroke, current: HTMLElement | undefined): void {
   consume(stroke.event);
-  if (!current) {
-    stroke.context.announce('Select a Graph node to focus.');
-    return;
-  }
-  current.dispatchEvent(
-    new CustomEvent('graph-focus', {
-      bubbles: true,
-      detail: { id: current.dataset.canonicalId || current.dataset.keyboardItem },
-    }),
-  );
-  current.focus();
-  current.scrollIntoView?.({ block: 'center', inline: 'center', behavior: 'instant' });
+  if (!current || !runRouteTool('graph.fit'))
+    stroke.context.announce('Select a Graph node to fit.');
 }
 
 function toggleGroup(stroke: KeyStroke, current: HTMLElement | undefined): void {
@@ -339,7 +375,10 @@ function toggleGroup(stroke: KeyStroke, current: HTMLElement | undefined): void 
     current?.closest<HTMLElement>('[data-keyboard-group]') ??
     stroke.context.root.querySelector<HTMLElement>('[data-keyboard-group]');
   const toggle = group?.querySelector<HTMLButtonElement>('[aria-expanded]');
-  if (toggle && toggle.getAttribute('aria-expanded') !== String(stroke.key === ']')) {
+  if (
+    toggle &&
+    toggle.getAttribute('aria-expanded') !== String(stroke.key === LIST_TOOL_SHORTCUTS.expand.key)
+  ) {
     toggle.click();
     toggle.focus({ preventScroll: true });
   }
@@ -372,12 +411,27 @@ function viewShortcut(
   current: HTMLElement | undefined,
 ): boolean {
   if (stroke.key === 'f' && routeIs(stroke.context, 'graph')) {
-    focusGraph(stroke, current);
+    fitGraphSelection(stroke, current);
     return true;
   }
-  if ((stroke.key === '[' || stroke.key === ']') && routeIs(stroke.context, 'list')) {
-    toggleGroup(stroke, current);
-    return true;
+  if (routeIs(stroke.context, 'list')) {
+    if (
+      stroke.key === LIST_TOOL_SHORTCUTS.collapse.key ||
+      stroke.key === LIST_TOOL_SHORTCUTS.expand.key
+    ) {
+      toggleGroup(stroke, current);
+      return true;
+    }
+    if (stroke.key === LIST_TOOL_SHORTCUTS.filter.key) {
+      consume(stroke.event);
+      focusFilter(stroke.context);
+      return true;
+    }
+    const tool = LIST_TOOL_IDS[stroke.key];
+    if (tool && runRouteTool(tool)) {
+      consume(stroke.event);
+      return true;
+    }
   }
   return rowActivation(stroke, state, current);
 }
@@ -407,8 +461,6 @@ function nextItem(
   current: HTMLElement | undefined,
 ): HTMLElement | undefined {
   const { event, key, context } = stroke;
-  if (current?.dataset.neighbours !== undefined && event.key.startsWith('Arrow'))
-    return graphNeighbour(current, rows, event.key);
   const horizontal = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
   if (current?.closest('[data-keyboard-column]') && horizontal)
     return boardNeighbour(context, current, event.key);
@@ -523,6 +575,10 @@ export function installKeyboardCoordinator(
       command: event.metaKey || event.ctrlKey,
     };
     if (skipShortcut(stroke, state, document)) {
+      state.goAt = null;
+      return;
+    }
+    if (canvasKey(stroke)) {
       state.goAt = null;
       return;
     }

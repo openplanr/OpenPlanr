@@ -499,7 +499,7 @@ a.pc-activity__live-title:hover {
 @media (width < 900px) {
   /* The shell's narrow scroll padding (console-shell.css). */
   .pc-shell .pc-activity {
-    --pc-activity-bleed: 14px;
+    --pc-activity-bleed: 16px;
   }
   .pc-activity__chart {
     display: none;
@@ -644,6 +644,6 @@ a.pc-activity__live-title:hover {
 @media (600px <= width < 900px) {
   .pc-shell .pc-activity {
     --pc-activity-gutter: 0px;
-    --pc-activity-bleed: 24px;
+    --pc-activity-bleed: 16px;
   }
 }

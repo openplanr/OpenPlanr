@@ -283,6 +283,15 @@ describe('controller focus', () => {
     expect(controller.getCamera()).toEqual({ x: 152, y: 152, zoom: 1 });
   });
 
+  it('reveals a focused node at once with motion on, even when the next frame shares its start time', async () => {
+    const { controller, register } = make({ motion: 'auto' });
+    controller.setNodes([node('covered', 900, 700)]);
+    register('covered').focus();
+    await frame(0);
+    await frame(0);
+    expect(controller.getCamera()).toEqual({ x: 152, y: 152, zoom: 1 });
+  });
+
   it('leaves focus outside when a parked node remounts after the user exits', async () => {
     const { controller, stage, register } = make();
     controller.setNodes([node('a')]);

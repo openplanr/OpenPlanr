@@ -1,0 +1,219 @@
+/* Floating chrome from 600 px: kit colours mapped to dashboard tokens, page insets, product parts. */
+
+.pc-chrome {
+  --canvas-chrome-background: var(--op-panel);
+  --canvas-chrome-foreground: var(--op-text);
+  --canvas-chrome-muted: var(--op-muted);
+  --canvas-chrome-border: var(--op-line);
+  --canvas-chrome-hover: var(--op-raised);
+  --canvas-chrome-accent: var(--op-accent-soft);
+  --canvas-chrome-on-accent: var(--op-accent);
+  --canvas-chrome-focus: var(--op-focus);
+  --canvas-chrome-shadow: var(--op-shadow-float);
+  z-index: 50;
+  font: 500 13px / 1.3 var(--pc-font-sans);
+}
+
+/* Page layers such as the selection bar stay below the chrome. */
+.pc-shell[data-shell-layout="floating"] .pc-shell__main {
+  z-index: 0;
+}
+.pc-shell[data-shell-layout="floating"] .pc-shell__scroll {
+  --pc-gutter: 24px;
+  padding-block: 64px;
+  scroll-padding-block: 64px;
+}
+@media (max-width: 899px) {
+  .pc-shell[data-shell-layout="floating"] .pc-shell__scroll {
+    --pc-gutter: 16px;
+  }
+}
+/* Every page scroller, including the local Operate and boot planes, clears a pinned panel. */
+.pc-shell[data-navigation-inset] .pc-shell__scroll {
+  padding-left: calc(
+    var(--canvas-chrome-inset) +
+    var(--canvas-chrome-navigation-width) +
+    var(--pc-gutter)
+  );
+}
+.pc-shell[data-sidebar-inset] .pc-shell__scroll {
+  padding-right: calc(
+    var(--canvas-chrome-inset) +
+    var(--canvas-chrome-sidebar-width) +
+    var(--pc-gutter)
+  );
+}
+.pc-shell[data-shell-layout="floating"] .pc-plane-banner {
+  top: 64px;
+}
+
+.pc-shell__scrollbar-probe {
+  position: absolute;
+  top: 0;
+  left: -200px;
+  width: 100px;
+  height: 100px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* Right chrome clears a classic page scrollbar on every route, so it stays put between routes. */
+.pc-shell {
+  --pc-chrome-gutter: var(--pc-scrollbar-width);
+}
+.pc-chrome .canvas-chrome-action,
+.pc-chrome .canvas-chrome-sidebar,
+.pc-chrome .canvas-chrome-help {
+  right: calc(
+    var(--canvas-chrome-inset) +
+    var(--pc-chrome-gutter, 0px) +
+    env(safe-area-inset-right)
+  );
+}
+
+.pc-chrome .canvas-chrome-panel-surface {
+  border-radius: 14px;
+}
+/* Live patches that grow the inspector must not reflow it when its scrollbar appears. */
+.pc-chrome .canvas-chrome-panel-body {
+  scrollbar-gutter: stable;
+}
+.pc-chrome .canvas-chrome-menu-card {
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+}
+/* The kit styles every panel header; inspector content keeps its own header layout. */
+.pc-chrome .pc-detail__header {
+  display: grid;
+  align-items: normal;
+  padding: 0;
+  border: 0;
+}
+.pc-chrome .pc-detail__header > * {
+  margin: 0;
+}
+/* Accent marks state: pressed pins, the menu while navigation is open, the active place. */
+.pc-chrome .canvas-chrome-panel-surface header button[aria-pressed="true"],
+.pc-chrome .canvas-chrome-view-picker > button[aria-expanded="true"],
+.pc-chrome .pc-operate-places__tab[aria-current="page"] {
+  color: var(--canvas-chrome-on-accent);
+  background: var(--canvas-chrome-accent);
+}
+/* Inspector content stays neutral; the selection itself carries the accent. */
+.pc-shell-inspector__content
+  .pc-detail__artifact[data-compact]
+  .pc-detail__trace
+  > li[data-current]
+  .pc-detail__step {
+  background: var(--op-raised);
+  box-shadow: inset 2px 0 0 var(--op-heading);
+}
+.pc-chrome-label {
+  display: block;
+  padding: 8px 10px 4px;
+  font: 600 11px var(--pc-font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--op-dim);
+}
+.pc-chrome-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--op-line);
+}
+/* Stable widths keep the view name and the right-anchored action pill from shifting per route. */
+.pc-chrome .canvas-chrome-view-picker > button {
+  min-width: 92px;
+  justify-content: start;
+}
+.pc-chrome:not(.pc-chrome--compact) .canvas-chrome-action > .pc-conn {
+  min-width: 150px;
+  justify-content: start;
+}
+.pc-chrome:not(.pc-chrome--compact) .pc-chrome-live .pc-conn {
+  min-width: 64px;
+}
+.pc-chrome-route-tabs:empty,
+.pc-chrome .pc-operate-places__phone {
+  display: none;
+}
+
+.pc-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  color: var(--op-muted);
+  text-decoration: none;
+  border-radius: 8px;
+}
+.pc-nav-item:hover,
+.pc-nav-item[aria-current="page"] {
+  color: var(--op-heading);
+  background: var(--op-raised);
+}
+.pc-nav-item > span:first-of-type {
+  flex: 1;
+}
+
+.pc-chrome .pc-help-card {
+  position: fixed;
+  top: auto;
+  right: calc(12px + var(--pc-chrome-gutter, 0px));
+  bottom: 64px;
+  left: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  width: 300px;
+  padding: 6px;
+}
+.pc-help-card dl {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+  padding: 0 10px 10px;
+}
+.pc-help-card dd {
+  margin: 0;
+}
+.pc-help-card header,
+.pc-help-card li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+}
+.pc-help-card header {
+  min-height: 40px;
+}
+.pc-help-card ul {
+  gap: 1px;
+  padding-block: 4px;
+  border-block: 1px solid var(--op-line);
+}
+.pc-chrome-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Centring halves the room the pill may shrink into; tool labels stay on one line instead. */
+.pc-chrome .canvas-chrome-toolbar {
+  width: max-content;
+}
+
+/* Forced colours drop the accent fill, so pressed toggles take the system highlight. */
+@media (forced-colors: active) {
+  .canvas-chrome-root.pc-chrome button[aria-pressed="true"],
+  .pc-graph-phone [aria-pressed="true"] {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}

@@ -34,7 +34,7 @@ async function fixture() {
         import { Button, CardHeader, DataTable, IconButton, Input, Select, Switch, Tabs } from './src/design-system/components/console-core.tsx';
         import { ArtifactRowCopy, ArtifactRowMeta, ArtifactRowTitle, artifactRowStyle } from './src/design-system/components/artifact-row.tsx';
         import { SegmentedControl } from './src/design-system/components/planr-console.tsx';
-        import { DependencyGraph, WorkItemChip } from './src/design-system/components/console-planr.tsx';
+        import { WorkItemChip } from './src/design-system/components/console-planr.tsx';
         import { GovernedButton } from './src/design-system/components/governed-button.tsx';
         function Fixture() {
           const [value, setValue] = useState('one');
@@ -58,7 +58,6 @@ async function fixture() {
               value={value} onChange={setValue} />
             <GovernedButton disabled={disabled} disabledReason={disabled ? 'Unavailable' : undefined}
               onInvoke={() => undefined}>Governed action</GovernedButton>
-            <DependencyGraph nodes={[{id:'item',type:'task',label:'Item'}]} edges={[]} />
             <section id="touch-recipes" style={{display:'grid',gridTemplateColumns:'minmax(0,1fr)',gap:32,padding:32,maxWidth:960}}>
               <div data-hit-group="card" style={{padding:24}}>
                 <CardHeader title="Targets" description="Card target details" href="#/list" count={2} />
@@ -173,7 +172,6 @@ test('renders compact desktop controls and keeps touch targets through state cha
             wrappers: heights('.pc-chip-menu'),
             segments: heights('.pc-segmented__option'),
             segmented: heights('.pc-segmented'),
-            graph: heights('.pc-graph-controls button'),
             governed: heights('.op-governed-button'),
           };
         });
@@ -197,10 +195,6 @@ test('renders compact desktop controls and keeps touch targets through state cha
           label,
         );
         assert.deepEqual(measurements.segmented, [mode.touch ? 52 : 38], label);
-        assert(
-          measurements.graph.every((height) => height === (mode.touch ? 44 : 30)),
-          label,
-        );
         assert.deepEqual(measurements.governed, [mode.touch ? 44 : 36], label);
       }
       await page.evaluate(() => window.densityFixture.setDisabled(false));

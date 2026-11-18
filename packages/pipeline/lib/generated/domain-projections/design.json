@@ -37,7 +37,7 @@
     {
       "source": "packages/canvas/src/controller.mjs",
       "target": "lib/canvas/controller.mjs",
-      "sha256": "629f71a18aca5b942090f502d1317f56120119a73f512c06867632fb175c7aa4",
+      "sha256": "d72fadc8a8a186b8ee57e473c3c214c69674b472904586bc5042c1fe622ef73b",
       "mode": "644"
     },
     {
@@ -721,7 +721,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "10dcbf9b4ee2a039f4b6502d741bb9064d668f7ff776f311330e83f2086eccec",
+      "sha256": "320023c0555916bf4ad1cf05ed138957b076bf437d9d672c2d5cc70f58c2d9f6",
       "mode": "644"
     }
   ]

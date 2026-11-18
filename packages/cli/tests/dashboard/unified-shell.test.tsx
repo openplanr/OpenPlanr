@@ -150,10 +150,10 @@ describe('unified dashboard shell', () => {
       expect(html).not.toContain('scope-dashboard · business');
       expect(html).toContain('href="#/home"');
       expect(html).toContain('href="#/operate/today"');
-      expect(html).toContain('Jump to a view or an artifact');
+      expect(html).toContain('aria-label="Search or run');
       expect(html).toContain('role="status"');
       expect(html).toContain('title="connection: connected"');
-      expect(html).toContain('watcher connected');
+      expect(html).toMatch(/<output class="pc-chrome-live" aria-live="polite">.*?Live/u);
       expect(html).toContain('data-dashboard-build-id="dashboard-test-build"');
     }
     expect(planning).toContain('data-product="planning"');
@@ -174,7 +174,7 @@ describe('unified dashboard shell', () => {
 
   it('keeps contextual destinations reachable in the console navigation', () => {
     const html = renderApp('#/operate/actions/action-17');
-    expect(html).toContain('aria-label="Dashboard navigation"');
+    expect(html).toContain('aria-label="Navigation"');
     for (const href of [
       '#/operate/today',
       '#/operate/inbox',
@@ -198,7 +198,7 @@ describe('unified dashboard shell', () => {
     expect(html).toContain('aria-busy="true"');
     expect(html).toContain('data-route-pending="booting"');
     expect(html).toContain('title="connection: connected"');
-    expect(html).toContain('watcher connected');
+    expect(html).toMatch(/<output class="pc-chrome-live" aria-live="polite">.*?Live/u);
 
     const testDirectory = dirname(fileURLToPath(import.meta.url));
     const stylesheet = readFileSync(

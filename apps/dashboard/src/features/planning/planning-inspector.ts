@@ -8,6 +8,8 @@ import {
 } from '../shell/inspector-selection.js';
 import { type PlanningModelNode, planningDetailHref } from './planning-model.js';
 
+export { useInspectorStore } from '../shell/inspector-selection.js';
+
 function frontmatterString(
   frontmatter: Readonly<Record<string, unknown>>,
   key: string,

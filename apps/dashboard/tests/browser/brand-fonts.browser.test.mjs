@@ -288,7 +288,9 @@ test('production tokens, themes and local fonts work with external networking bl
       for (let toggle = 0; toggle < 3; toggle += 1) {
         const current = await page.evaluate(() => document.documentElement.dataset.theme);
         const next = { dark: 'system', system: 'light', light: 'dark' }[current];
-        await page.getByRole('button', { name: `Theme: ${current}. Switch to ${next}.` }).click();
+        // From 600 px the theme lives in the floating main menu.
+        await page.getByRole('button', { name: 'Menu', exact: true }).click();
+        await page.getByRole('menuitem', { name: `Theme: ${current}`, exact: true }).click();
         assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), next);
         assert.equal(await page.evaluate(() => localStorage.getItem('op-theme')), next);
       }
@@ -341,7 +343,8 @@ test('production tokens, themes and local fonts work with external networking bl
     await page.waitForSelector('.pc-shell');
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'system');
     await page.getByText('Theme preference could not be saved in this browser.').waitFor();
-    await page.getByRole('button', { name: 'Theme: system. Switch to light.' }).click();
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Theme: system', exact: true }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
     await page.getByText('Theme preference could not be saved in this browser.').waitFor();
   } finally {

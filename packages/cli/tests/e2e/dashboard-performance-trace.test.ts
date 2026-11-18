@@ -396,7 +396,7 @@ describe('offline dashboard trace contract smoke', () => {
       rendererFrameWork([
         { name: 'thread_name', ph: 'M', ts: 0, pid: 1, tid: 2, args: { name: 'CrRendererMain' } },
       ]),
-    ).toThrow('Dashboard frame marks are absent. Preserve native performance.mark.');
+    ).toThrow('Frame marks dashboard-frame are absent. Preserve native performance.mark.');
     expect(() =>
       rendererFrameWork([
         { name: 'thread_name', ph: 'M', ts: 0, pid: 9, tid: 9, args: { name: 'CrRendererMain' } },

@@ -181,9 +181,6 @@
   --op-density-row-block: var(--op-space-3);
   --op-density-surface-block: var(--op-space-6);
   --op-density-layout-gap: var(--op-space-8);
-  --op-layout-rail-width: 240px;
-  --op-layout-rail-compact-width: 112px;
-  --op-layout-topbar-height: 72px;
   --op-layout-topbar-mobile-height: 60px;
   --op-layout-content-width: 1180px;
   --op-layout-mobile-nav-height: 68px;

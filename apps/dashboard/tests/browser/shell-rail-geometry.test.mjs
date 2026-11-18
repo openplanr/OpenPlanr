@@ -20,6 +20,8 @@ const styles = [
   'features/search/command-palette.css',
   'features/planning/activity.css',
   'features/planning/board.css',
+  '../../../packages/canvas/src/styles.css',
+  'features/shell/floating-chrome.css',
 ]
   .map((path) =>
     readFileSync(resolve(dashboard, 'src', path), 'utf8').replace(/@import[^;]*;/gu, ''),
@@ -36,8 +38,8 @@ function bundleFixture() {
         import { flushSync } from 'react-dom';
         import { DashboardProviders } from './src/app/providers.tsx';
         import { UnifiedShell } from './src/features/shell/UnifiedShell.tsx';
-        import { NavRail, StatusBar } from './src/features/shell/shell-navigation.tsx';
-        import { parseDashboardRoute } from './src/app/router.tsx';
+        import { ChromeProvider, ChromeRoot } from '@openplanr/canvas/react';
+        import { HelpCard } from './src/features/shell/floating-chrome-parts.tsx';
         import { ActivitySinceOpened } from './src/features/planning/ActivityParts.tsx';
         import { createDashboardQueryIdentity } from './src/lib/binding/query-identity.ts';
         import { dashboardProductStatePolicy, parseDashboardProductState } from './src/lib/api/product-state.ts';
@@ -67,28 +69,33 @@ function bundleFixture() {
         }});
         const container = document.getElementById('root');
         let root = createRoot(container);
-        let savedCompact = false;
+        let saved = {};
         const saves = [];
         const makeAdapters = () => ({
           loadSingleLetters: () => true,
           saveSingleLetters: () => undefined,
           copy: async () => undefined,
           themePreference: { initialChoice: 'dark', save: () => undefined },
-          railPreference: {
-            initialCompact: savedCompact,
-            save: (compact) => { savedCompact = compact; saves.push(compact); },
+          chromePreference: {
+            storage: () => ({
+              get: (key) => saved[key],
+              set: (key, value) => { saved = { ...saved, [key]: value }; saves.push([key, value]); },
+            }),
           },
         });
         let adapters = makeAdapters();
         let state = { route: '#/list', projectName: 'OpenPlanr', connectionState: 'booting' };
-        let status = { branch: null, nodeCount: null, edgeCount: null, connectionState: 'booting', buildId: 'geometry-fixture' };
+        let status = {
+          project: 'OpenPlanr', branch: null, totals: null, access: 'Read-only · booting',
+          storageNotice: null, buildId: 'geometry-fixture',
+        };
         const render = (patch = {}) => {
           state = { ...state, ...patch };
           const readyBoard = state.route === '#/board' && state.connectionState === 'connected';
           flushSync(() => root.render(createElement(DashboardProviders, {
             buildId: 'shell-geometry-fixture',
             initialHash: state.route,
-            binding: readyBoard ? binding : null,
+            binding,
             projection: readyBoard ? boardProjection : undefined,
             identity: {
               projectName: state.projectName,
@@ -105,23 +112,18 @@ function bundleFixture() {
         };
         window.shellGeometry = {
           render,
-          renderRail: (branch) => {
-            flushSync(() => root.render(createElement('div', { className: 'pc-shell' },
-              createElement(NavRail, {
-                branch, product: 'planning', route: parseDashboardRoute('#/list'),
-                compact: false, operateAvailable: true, onOpenPalette: () => undefined,
-              }))));
-          },
-          renderStatus: (patch = {}) => {
+          renderHelp: (patch = {}) => {
             status = { ...status, ...patch };
-            flushSync(() => root.render(createElement(StatusBar, status)));
+            flushSync(() => root.render(createElement(ChromeProvider, null,
+              createElement(ChromeRoot, { className: 'pc-chrome' },
+                createElement(HelpCard, { status, onClose: () => undefined, onAllShortcuts: () => undefined })))));
           },
           renderFeed: (connection) => {
             flushSync(() => root.render(createElement('div', { className: 'op-planning pc-activity' },
               createElement(ActivitySinceOpened, { connection, rows: [] }))));
           },
-          preference: () => ({ savedCompact, saves: [...saves] }),
-          clearPreference: () => { savedCompact = undefined; },
+          preference: () => ({ saved, saves: [...saves] }),
+          clearPreference: () => { saved = {}; },
           remount: () => {
             flushSync(() => root.unmount());
             root = createRoot(container);
@@ -167,38 +169,92 @@ async function geometry(page) {
       const { x, y, width, height } = element.getBoundingClientRect();
       return { x, y, width, height };
     };
+    const scroller = document.querySelector('.pc-shell__scroll');
+    if (!scroller) throw new Error('Missing shell geometry target: .pc-shell__scroll');
     return {
-      rail: rect('nav.pc-rail'),
+      navigation: rect('[data-chrome-slot="navigation"]'),
+      sidebar: rect('[data-chrome-slot="sidebar"]'),
+      menu: rect('[data-chrome-slot="menu"]'),
+      toolbar: rect('[data-chrome-slot="toolbar"]'),
+      action: rect('[data-chrome-slot="action"]'),
+      help: rect('[data-chrome-slot="help"]'),
       column: rect('.pc-shell__column'),
       main: rect('.pc-shell__main'),
       scroll: rect('.pc-shell__scroll'),
-      crumb: rect('.pc-topbar__crumb'),
-      palette: rect('.pc-topbar__palette'),
-      end: rect('.pc-topbar__end'),
+      palette: rect('[data-chrome-slot="toolbar"] button[aria-label^="Search or run"]'),
+      viewport: { width: innerWidth, height: innerHeight },
+      inset: getComputedStyle(scroller).paddingLeft,
+      scrollbar: scroller.offsetWidth - scroller.clientWidth,
+      edge: scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth,
     };
   });
 }
 
-function assertRail(actual, baseline, width, context) {
-  assert.equal(actual.rail.width, width, `${context}: rail width`);
-  assert.equal(actual.column.x, width, `${context}: content column starts at rail edge`);
-  assert.equal(actual.rail.width, baseline.rail.width, `${context}: rail stays fixed`);
-  assert.equal(actual.column.x, baseline.column.x, `${context}: column stays fixed`);
+/** Approved floating geometry: 12 px inset, panels 64 px from top and bottom, fixed pill sizes. */
+function assertChromeFrame(actual, context) {
+  const { height } = actual.viewport;
+  const width = actual.edge;
+  assert.deepEqual(
+    actual.navigation,
+    { x: 12, y: 64, width: 264, height: height - 128 },
+    `${context}: navigation panel`,
+  );
+  assert.deepEqual(
+    actual.sidebar,
+    { x: width - 12 - 312, y: 64, width: 312, height: height - 128 },
+    `${context}: sidebar`,
+  );
+  assert.equal(actual.toolbar.height, 44, `${context}: tool pill height`);
+  assert.equal(actual.toolbar.y, 12, `${context}: tool pill inset`);
+  for (const slot of ['menu', 'action', 'help'])
+    assert.equal(actual[slot].height, 40, `${context}: ${slot} height`);
+  assert.deepEqual(actual.menu.x, 12, `${context}: menu inset`);
+  assert.equal(actual.action.x + actual.action.width, width - 12, `${context}: action inset`);
+  assert.deepEqual(
+    actual.help,
+    { x: width - 52, y: height - 52, width: 40, height: 40 },
+    `${context}: round help`,
+  );
+}
+
+/** A right-anchored slot's box, with x as its right inset from the scroller's inner edge. */
+function fromEdge(actual, slot) {
+  const { x, y, width, height } = actual[slot];
+  return { right: actual.edge - x - width, y, width, height };
+}
+
+function assertChrome(actual, baseline, pinned, context) {
+  assertChromeFrame(actual, context);
+  assert.equal(actual.column.x, 0, `${context}: content column spans the window`);
+  assert.equal(
+    actual.inset,
+    pinned ? '300px' : '24px',
+    `${context}: content insets only for pinned navigation`,
+  );
   assert.deepEqual(actual.palette, baseline.palette, `${context}: palette stays fixed`);
+  assert.deepEqual(actual.menu, baseline.menu, `${context}: menu stays fixed`);
+  assert.deepEqual(
+    fromEdge(actual, 'action'),
+    fromEdge(baseline, 'action'),
+    `${context}: action pill stays fixed`,
+  );
   assert.deepEqual(actual.main, baseline.main, `${context}: main stays fixed`);
   assert.deepEqual(actual.scroll, baseline.scroll, `${context}: scroll stays fixed`);
 }
 
-async function assertBoardShell(page, width, context) {
+async function panel(page, slot) {
+  return page.locator(`[data-chrome-slot="${slot}"]`).getAttribute('data-open');
+}
+
+async function assertBoardShell(page, baseline, pinned, context) {
   await render(page, { route: '#/list', connectionState: 'connected' });
   await page.waitForSelector('[data-route-kind="planning.list"]');
-  const baseline = await geometry(page);
   await render(page, { route: '#/board', connectionState: 'connected' });
   const board = page.locator('[data-route-kind="planning.board"].op-planning--board');
   await board.waitFor({ state: 'visible' });
   assert.equal(await board.locator('.pc-status-board__column').count(), 5);
   await settle(page);
-  assertRail(await geometry(page), baseline, width, context);
+  assertChrome(await geometry(page), baseline, pinned, context);
   await render(page, { route: '#/board', connectionState: 'booting' });
 }
 
@@ -209,7 +265,7 @@ test('bundles the shell geometry fixture into a standalone browser script', asyn
   assert.doesNotMatch(styles, /@import\s/u);
 });
 
-test('topbar grid fixes the palette position across routes and reserves the rail branch line', {
+test('tool pill fixes the palette position across routes and the help card reserves the branch line', {
   timeout: 60_000,
 }, async (t) => {
   const browser = await launchBrowser();
@@ -228,44 +284,57 @@ test('topbar grid fixes the palette position across routes and reserves the rail
     await page.setViewportSize({ width, height: 1000 });
     await render(page, { route: '#/list' });
     const baseline = await geometry(page);
-    assert.equal(baseline.palette.width, width >= 1200 ? 300 : 44);
+    assertChromeFrame(baseline, `${width}`);
+    assert.equal(baseline.palette.height, 38);
     for (const route of ['#/board', '#/graph', '#/home', '#/operate/today', '#/list']) {
       await render(page, { route });
       assert.deepEqual((await geometry(page)).palette, baseline.palette, `${width}: ${route}`);
     }
-    const labels = await page
-      .locator('.pc-rail__item > span:not(.pc-rail__count)')
-      .evaluateAll((elements) =>
-        elements.map((element) => ({
-          text: element.textContent,
-          width: element.getBoundingClientRect().width,
-          fits: element.scrollWidth <= element.clientWidth,
-        })),
-      );
+    await page.keyboard.press('Alt+BracketLeft');
+    await settle(page);
+    assert.equal(await panel(page, 'navigation'), 'true');
+    const labels = await page.locator('.pc-nav-item > span:first-of-type').evaluateAll((elements) =>
+      elements.map((element) => ({
+        text: element.textContent,
+        width: element.getBoundingClientRect().width,
+        fits: element.scrollWidth <= element.clientWidth,
+      })),
+    );
+    assert.equal(labels.length, 17);
     for (const label of labels) {
       assert(label.width > 24, `${width}: ${label.text} retains a legible text column`);
       assert(label.fits, `${width}: ${label.text} is not clipped`);
     }
+    await page.keyboard.press('Alt+BracketLeft');
+    await settle(page);
   }
-  await page.evaluate(() => window.shellGeometry.renderRail(null));
+  await page.evaluate(() => window.shellGeometry.renderHelp({ branch: null }));
   await settle(page);
-  const branch = page.locator('.pc-rail__branch');
-  assert.equal(await branch.evaluate((element) => element.childNodes.length), 0);
+  const branch = page.locator('.pc-help-card dt:text-is("Branch") + dd');
+  assert.equal(await branch.innerText(), 'Unavailable');
   const before = await branch.boundingBox();
   assert(before);
-  assert.equal(before.height, 16);
   await page.evaluate(() => {
-    window.__dashboardLayoutShifts.markPhase('rail-bootstrap');
-    window.shellGeometry.renderRail('feature/a-long-bootstrap-branch-name');
+    window.__dashboardLayoutShifts.markPhase('help-bootstrap');
+    window.shellGeometry.renderHelp({
+      branch: 'feature/a-long-bootstrap-branch-name-for-a-help-card',
+    });
   });
   await settle(page);
-  assert.equal(await branch.innerText(), 'feature/a-long-bootstrap-branch-name · .planr/');
+  assert.equal(
+    await branch.getAttribute('title'),
+    'feature/a-long-bootstrap-branch-name-for-a-help-card',
+  );
   assert.equal(await branch.evaluate((element) => element.childNodes.length), 1);
   assert.deepEqual(await branch.boundingBox(), before);
+  assert(
+    await branch.evaluate((element) => element.scrollWidth > element.clientWidth),
+    'a long branch ends in an ellipsis instead of widening the card',
+  );
   const shifts = await page.evaluate(() =>
     window.__dashboardLayoutShifts
       .snapshot()
-      .shifts.filter((shift) => shift.phase === 'rail-bootstrap'),
+      .shifts.filter((shift) => shift.phase === 'help-bootstrap'),
   );
   assert.equal(
     shifts.reduce((total, shift) => total + shift.value, 0),
@@ -275,8 +344,41 @@ test('topbar grid fixes the palette position across routes and reserves the rail
   assert.deepEqual(errors, []);
 });
 
-test('keeps rail preferences and startup top-bar geometry stable across mounted route changes', {
+test('right chrome clears a classic page scrollbar by the approved inset', {
   timeout: 60_000,
+}, async (t) => {
+  const browser = await launchBrowser();
+  t.after(() => browser.close());
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  t.after(() => context.close());
+  await context.route('**/*', (route) => route.abort());
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.setContent('<!doctype html><html><body><div id="root"></div></body></html>');
+  await page.addStyleTag({
+    content: `${styles}\n::-webkit-scrollbar { width: 15px; height: 15px; }`,
+  });
+  await page.addScriptTag({ content: await bundleFixture() });
+  await settle(page);
+  for (const width of [1440, 900]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await render(page, { route: '#/list', connectionState: 'connected' });
+    const list = await geometry(page);
+    assert.equal(list.scrollbar, 15, `${width}: classic scrollbar`);
+    assert.equal(list.edge, width - 15, `${width}: List measures from the scroller's inner edge`);
+    assertChromeFrame(list, `${width}: List`);
+    await render(page, { route: '#/graph', connectionState: 'connected' });
+    const graph = await geometry(page);
+    assertChromeFrame(graph, `${width}: Graph`);
+    for (const slot of ['sidebar', 'action', 'help'])
+      assert.deepEqual(graph[slot], list[slot], `${width}: ${slot} stays put from List to Graph`);
+  }
+  assert.deepEqual(errors, []);
+});
+
+test('keeps pinned navigation and startup pill geometry stable across mounted route changes', {
+  timeout: 90_000,
 }, async (t) => {
   const code = await bundleFixture();
   const browser = await launchBrowser();
@@ -294,61 +396,79 @@ test('keeps rail preferences and startup top-bar geometry stable across mounted 
   );
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: code });
-  await page.waitForSelector('nav.pc-rail');
-  await settle(page);
+  await page.waitForSelector('[data-chrome-slot="navigation"]');
+  await render(page, { connectionState: 'connected' });
 
-  const expanded = await geometry(page);
-  assert.equal(expanded.rail.width, 236);
+  const closed = await geometry(page);
+  assertChromeFrame(closed, 'closed');
+  assert.equal(await panel(page, 'navigation'), 'false');
+  assert.equal(await panel(page, 'sidebar'), 'false');
   for (let repeat = 0; repeat < 3; repeat += 1) {
     for (const route of ['#/board', '#/list', '#/graph', '#/home']) {
       await render(page, { route });
-      if (route === '#/board') await assertBoardShell(page, 236, `expanded Board ${repeat}`);
-      assertRail(await geometry(page), expanded, 236, `expanded ${repeat} ${route}`);
+      if (route === '#/board')
+        await assertBoardShell(page, closed, false, `closed Board ${repeat}`);
+      await render(page, { connectionState: 'connected' });
+      assertChrome(await geometry(page), closed, false, `closed ${repeat} ${route}`);
     }
   }
 
-  await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
+  await render(page, { route: '#/list', connectionState: 'connected' });
+  await page.getByRole('button', { name: 'List: show navigation', exact: true }).click();
+  await page
+    .locator('[data-chrome-slot="navigation"]')
+    .getByRole('button', { name: 'Pin navigation', exact: true })
+    .click();
   await settle(page);
-  const compact = await geometry(page);
-  assert.equal(compact.rail.width, 64);
-  assert.deepEqual(await page.evaluate(() => window.shellGeometry.preference()), {
-    savedCompact: true,
-    saves: [true],
+  const pinned = await geometry(page);
+  assertChrome(pinned, closed, true, 'pinned');
+  assert.deepEqual(await page.evaluate(() => window.shellGeometry.preference().saved), {
+    'canvas.chrome.panel.navigation': { open: true, pinned: true },
   });
   for (let repeat = 0; repeat < 3; repeat += 1) {
     for (const route of ['#/board', '#/list', '#/graph', '#/home']) {
       await render(page, { route });
-      if (route === '#/board') await assertBoardShell(page, 64, `compact Board ${repeat}`);
-      assertRail(await geometry(page), compact, 64, `compact ${repeat} ${route}`);
+      if (route === '#/board') await assertBoardShell(page, pinned, true, `pinned Board ${repeat}`);
+      await render(page, { connectionState: 'connected' });
+      assertChrome(await geometry(page), pinned, true, `pinned ${repeat} ${route}`);
+      assert.equal(await panel(page, 'navigation'), 'true');
     }
   }
   await page.evaluate(() => window.shellGeometry.remount());
-  await settle(page);
-  assertRail(await geometry(page), compact, 64, 'restored compact preference');
-  await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
-  await settle(page);
+  await render(page, { route: '#/list', connectionState: 'connected' });
+  assertChrome(await geometry(page), pinned, true, 'restored pinned navigation');
+  await page
+    .locator('[data-chrome-slot="navigation"]')
+    .getByRole('button', { name: 'Pin navigation', exact: true })
+    .click();
   await page.evaluate(() => window.shellGeometry.remount());
-  await settle(page);
-  assertRail(await geometry(page), expanded, 236, 'restored expanded preference');
-  assert.deepEqual(await page.evaluate(() => window.shellGeometry.preference()), {
-    savedCompact: false,
-    saves: [true, false],
-  });
+  await render(page, { route: '#/list', connectionState: 'connected' });
+  assertChrome(await geometry(page), closed, false, 'an unpinned panel starts closed');
+  assert.equal(await panel(page, 'navigation'), 'false');
+  assert.deepEqual(
+    (await page.evaluate(() => window.shellGeometry.preference().saves)).filter(
+      ([key]) => key === 'canvas.chrome.panel.navigation',
+    ),
+    [
+      ['canvas.chrome.panel.navigation', { open: true, pinned: false }],
+      ['canvas.chrome.panel.navigation', { open: true, pinned: true }],
+      ['canvas.chrome.panel.navigation', { open: true, pinned: false }],
+    ],
+  );
 
   await page.evaluate(() => {
     window.shellGeometry.clearPreference();
     window.shellGeometry.remount();
   });
-  for (const route of ['#/graph', '#/board', '#/sprints', '#/activity']) {
-    await render(page, { route });
-    assertRail(await geometry(page), compact, 64, `default compact ${route}`);
-  }
-  for (const route of ['#/home', '#/list']) {
-    await render(page, { route });
-    assertRail(await geometry(page), expanded, 236, `default expanded ${route}`);
+  for (const route of ['#/graph', '#/board', '#/sprints', '#/activity', '#/home', '#/list']) {
+    await render(page, { route, connectionState: 'connected' });
+    assertChrome(await geometry(page), closed, false, `default closed ${route}`);
   }
   await render(page, { route: '#/detail/QT-071' });
-  assertRail(await geometry(page), expanded, 236, 'detail keeps the List rail');
+  const detail = await geometry(page);
+  assertChromeFrame(detail, 'detail keeps the floating chrome');
+  assert.deepEqual(detail.main, closed.main, 'detail keeps main fixed');
+  assert.deepEqual(detail.scroll, closed.scroll, 'detail keeps scroll fixed');
 
   await render(page, { route: '#/list', projectName: 'OpenPlanr', connectionState: 'booting' });
   const startup = await geometry(page);
@@ -360,7 +480,7 @@ test('keeps rail preferences and startup top-bar geometry stable across mounted 
   ]) {
     await render(page, patch);
     const current = await geometry(page);
-    for (const slot of ['crumb', 'palette', 'end'])
+    for (const slot of ['menu', 'palette', 'action'])
       assert.deepEqual(
         current[slot],
         startup[slot],
@@ -368,21 +488,16 @@ test('keeps rail preferences and startup top-bar geometry stable across mounted 
       );
   }
   await render(page, { route: '#/list', connectionState: 'connected' });
-  assert.equal(await page.locator('.pc-shell-inspector, .pc-inspector-sheet').count(), 0);
-  assert.equal(
-    await page
-      .getByRole('button', { name: 'Show inspector: select an item first', exact: true })
-      .isDisabled(),
-    true,
-    'an inspector cannot be opened without a selection',
-  );
+  assert.equal(await page.getByRole('region', { name: 'Inspector', exact: true }).count(), 0);
+  assert.equal(await page.locator('[data-inspector-pending]').count(), 0);
+  assert.equal(await panel(page, 'sidebar'), 'false', 'no inspector opens without a selection');
   const emptySelection = await geometry(page);
   assert.equal(emptySelection.main.width, emptySelection.column.width);
   assert.deepEqual(errors, []);
   assert.deepEqual(requests, []);
 });
 
-test('compact product navigation fits every item and group at 1440 by 720', {
+test('navigation panel reaches every item and group at 1440 by 720', {
   timeout: 60_000,
 }, async (t) => {
   const code = await bundleFixture();
@@ -399,58 +514,49 @@ test('compact product navigation fits every item and group at 1440 by 720', {
   );
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: code });
-  await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
+  const expectedGroups = [
+    { label: 'Plan', items: ['Home', 'List', 'Graph', 'Board', 'Sprints', 'Activity', 'Search'] },
+    { label: 'Operate', items: ['Today', 'Inbox', 'Actions', 'Cycles'] },
+    { label: 'Record', items: ['Evidence', 'Outcomes', 'History', 'Recovery'] },
+    { label: 'Reference', items: ['Console', 'Diagnostics'] },
+  ];
 
-  for (const [route, expectedGroups] of [
-    [
-      '#/graph',
-      [{ label: 'Plan', items: ['Home', 'List', 'Graph', 'Board', 'Sprints', 'Activity'] }],
-    ],
-    [
-      '#/operate/today',
-      [
-        { label: 'Work', items: ['Today', 'Inbox', 'Actions', 'Cycles'] },
-        { label: 'Record', items: ['Evidence', 'Outcomes', 'History', 'Recovery'] },
-      ],
-    ],
-  ]) {
+  for (const route of ['#/graph', '#/operate/today']) {
     await render(page, { route });
-    const rail = page.getByRole('navigation', { name: 'Dashboard navigation', exact: true });
-    assert.equal(await rail.getAttribute('data-compact'), 'true');
-    assert.equal(
-      await rail.getByRole('button', { name: 'Search or jump', exact: true }).count(),
-      1,
-    );
-    assert.equal(
-      await rail.getByRole('button', { name: 'Expand navigation', exact: true }).count(),
-      1,
-    );
-    assert.equal(await rail.getByRole('region').count(), expectedGroups.length);
+    await page.keyboard.press('Alt+BracketLeft');
+    await settle(page);
+    const navigation = page.getByRole('navigation', { name: 'Navigation', exact: true });
+    assert.equal(await panel(page, 'navigation'), 'true');
+    assert.equal(await navigation.getByRole('button', { name: /^Search or run/u }).count(), 1);
+    for (const name of ['Pin navigation', 'Close navigation'])
+      assert.equal(await navigation.getByRole('button', { name, exact: true }).count(), 1);
+    assert.equal(await navigation.getByRole('region').count(), expectedGroups.length);
     for (const group of expectedGroups)
-      assert.equal(await rail.getByRole('region', { name: group.label, exact: true }).count(), 1);
-    const report = await rail.evaluate((element) => {
+      assert.equal(
+        await navigation.getByRole('region', { name: group.label, exact: true }).count(),
+        1,
+      );
+    // Measuring during the open transition reads a fractional box from the in-flight transform.
+    await navigation.evaluate((element) =>
+      Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+    );
+    const report = await navigation.evaluate((element) => {
       const bounds = element.getBoundingClientRect();
-      const groups = [...element.querySelectorAll('.pc-rail__section')].map((section) => ({
-        label: section.querySelector('.pc-rail__label')?.textContent,
-        items: [...section.querySelectorAll('a')].map((item) => item.getAttribute('aria-label')),
+      const body = element.querySelector('.canvas-chrome-panel-body');
+      if (!body) throw new Error('Missing navigation panel body');
+      const groups = [...element.querySelectorAll('section')].map((section) => ({
+        label: section.querySelector('.pc-chrome-label')?.textContent,
+        items: [...section.querySelectorAll('a')].map(
+          (item) => item.querySelector('span')?.textContent,
+        ),
       }));
-      const overflow = [
-        element,
-        element.querySelector('.pc-rail__sections'),
-        ...element.querySelectorAll('.pc-rail__section'),
-      ].map((region) => {
-        if (!region) throw new Error('Missing compact navigation region');
-        return {
-          horizontal: region.scrollWidth > region.clientWidth,
-          vertical: region.scrollHeight > region.clientHeight,
-        };
-      });
       const controls = [...element.querySelectorAll('a, button')].map((control) => {
+        control.scrollIntoView({ block: 'nearest' });
         const box = control.getBoundingClientRect();
         const style = getComputedStyle(control);
         const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
         return {
-          label: control.getAttribute('aria-label'),
+          label: control.getAttribute('aria-label') ?? control.textContent,
           visible: style.display !== 'none' && style.visibility !== 'hidden',
           inside:
             box.left >= bounds.left &&
@@ -460,33 +566,29 @@ test('compact product navigation fits every item and group at 1440 by 720', {
           receivesPointer: hit === control || control.contains(hit),
         };
       });
-      const separators = [
-        element.querySelector('.pc-rail__sections'),
-        ...element.querySelectorAll('.pc-rail__section + .pc-rail__section'),
-        element.querySelector('.pc-rail__footer'),
-      ].map((region) => {
-        if (!region) throw new Error('Missing compact navigation group separator');
-        const style = getComputedStyle(region);
-        return { width: style.borderTopWidth, style: style.borderTopStyle };
-      });
-      return { width: bounds.width, groups, overflow, controls, separators };
+      return {
+        width: bounds.width,
+        groups,
+        controls,
+        horizontal: body.scrollWidth > body.clientWidth,
+        overflowY: getComputedStyle(body).overflowY,
+      };
     });
-    assert.equal(report.width, 64);
-    assert.deepEqual(report.groups, expectedGroups, `${route}: product-specific navigation groups`);
-    assert.equal(report.controls.length, expectedGroups.flatMap((group) => group.items).length + 2);
-    for (const overflow of report.overflow)
-      assert.deepEqual(overflow, { horizontal: false, vertical: false });
+    assert.equal(report.width, 264);
+    assert.deepEqual(report.groups, expectedGroups, `${route}: every navigation group`);
+    assert.equal(report.controls.length, expectedGroups.flatMap((group) => group.items).length + 3);
+    assert.equal(report.horizontal, false, `${route}: no horizontal overflow`);
+    assert.equal(report.overflowY, 'auto', `${route}: hidden items scroll into reach`);
     for (const control of report.controls) {
       assert.equal(control.visible, true, `${route}: ${control.label} is visible`);
-      assert.equal(control.inside, true, `${route}: ${control.label} fits inside the rail`);
+      assert.equal(control.inside, true, `${route}: ${control.label} fits inside the panel`);
       assert.equal(
         control.receivesPointer,
         true,
         `${route}: ${control.label} receives pointer input`,
       );
     }
-    for (const separator of report.separators)
-      assert.deepEqual(separator, { width: '1px', style: 'solid' });
+    await page.keyboard.press('Alt+BracketLeft');
   }
   assert.deepEqual(errors, []);
 });
@@ -508,32 +610,30 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
   );
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: code });
-  await page.evaluate(() => window.shellGeometry.renderStatus());
+  await page.evaluate(() => window.shellGeometry.renderHelp());
   await settle(page);
   const statusGeometry = () =>
-    page.locator('.pc-statusbar').evaluate((element) =>
-      [
-        '.pc-statusbar__item--branch',
-        '.pc-statusbar__item--totals',
-        '.pc-watcher',
-        '.pc-statusbar__end',
-      ].map((selector) => {
-        const slot = element.querySelector(selector);
-        if (!slot) throw new Error(`Missing status geometry target: ${selector}`);
-        const { x, y, width, height } = slot.getBoundingClientRect();
-        return { x, y, width, height };
-      }),
+    page.locator('.pc-help-card').evaluate((element) =>
+      [element, element.querySelector('header > span'), ...element.querySelectorAll('dd')].map(
+        (slot) => {
+          if (!slot) throw new Error('Missing help status geometry target');
+          const { x, y, width, height } = slot.getBoundingClientRect();
+          return { x, y, width, height };
+        },
+      ),
     );
   const startup = await statusGeometry();
+  assert.equal(startup[0].width, 300, 'help card width');
   assert.deepEqual(
-    startup.slice(0, 3).map((slot) => slot.width),
-    [120, 216, 192],
+    startup.slice(2).map((slot) => slot.width),
+    [startup[2].width, startup[2].width, startup[2].width, startup[2].width],
+    'every fact uses one value column',
   );
   await page.evaluate(() => {
     window.__dashboardLayoutShifts.markPhase('status-bootstrap');
-    window.shellGeometry.renderStatus({
+    window.shellGeometry.renderHelp({
       branch: 'feature/a-long-bootstrap-branch-name',
-      connectionState: 'connected',
+      access: 'Read-only · Live',
     });
   });
   await settle(page);
@@ -542,9 +642,6 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
     startup,
     'bootstrap metadata keeps every status slot fixed',
   );
-  await page.evaluate(() => window.shellGeometry.renderStatus({ nodeCount: 1280, edgeCount: 320 }));
-  await settle(page);
-  assert.deepEqual(await statusGeometry(), startup, 'graph totals keep every status slot fixed');
   const startupShifts = await page.evaluate(() =>
     window.__dashboardLayoutShifts
       .snapshot()
@@ -554,6 +651,42 @@ test('status bootstrap and Activity disconnect preserve their painted geometry w
     startupShifts.reduce((total, shift) => total + shift.value, 0),
     0,
     JSON.stringify(startupShifts),
+  );
+  await page.evaluate(() => {
+    window.__dashboardLayoutShifts.markPhase('long-build-id');
+    window.shellGeometry.renderHelp({
+      buildId: 'dashboard-0.1.25-00d9a858d03fba2e-with-a-long-local-suffix',
+    });
+  });
+  await settle(page);
+  const withLongBuild = await statusGeometry();
+  assert.deepEqual(withLongBuild[0], startup[0], 'a long build id keeps the card fixed');
+  assert.deepEqual(withLongBuild.slice(2), startup.slice(2), 'and every fact fixed');
+  const build = page.locator('.pc-help-card header > span');
+  assert.equal(
+    await build.getAttribute('title'),
+    'dashboard-0.1.25-00d9a858d03fba2e-with-a-long-local-suffix',
+  );
+  assert(
+    await build.evaluate(
+      (element) =>
+        element.scrollWidth > element.clientWidth &&
+        getComputedStyle(element).textOverflow === 'ellipsis' &&
+        element.getBoundingClientRect().right <=
+          (element.closest('.pc-help-card')?.getBoundingClientRect().right ?? 0),
+    ),
+    'a long build id ends in an ellipsis inside the card',
+  );
+  await page.evaluate(() => window.shellGeometry.renderHelp({ totals: '1280 nodes · 320 edges' }));
+  await settle(page);
+  assert.deepEqual(
+    await statusGeometry(),
+    withLongBuild,
+    'graph totals keep every status slot fixed',
+  );
+  assert.equal(
+    await page.locator('.pc-help-card dt:text-is("Totals") + dd').innerText(),
+    '1280 nodes · 320 edges',
   );
 
   await page.evaluate(() => window.shellGeometry.renderFeed('connected'));
@@ -644,11 +777,10 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
   await render(page, { route: '#/home', connectionState: 'connected' });
   const mobile = await page.evaluate(() => {
     const topbar = document.querySelector('.pc-topbar');
-    const statusbar = document.querySelector('.pc-statusbar');
-    const watcher = statusbar?.querySelector('.pc-watcher');
-    const live = watcher?.querySelector('.pc-watcher__label');
+    const live = topbar?.querySelector('.pc-topbar__end .pc-conn--watcher');
+    const output = live?.closest('output');
     const title = topbar?.querySelector('.pc-topbar__view');
-    if (!topbar || !statusbar || !watcher || !live || !title)
+    if (!topbar || !live || !output || !title)
       throw new Error('Missing mobile shell geometry target');
     const line3Probe = document.createElement('span');
     line3Probe.style.color = 'var(--op-line3)';
@@ -678,8 +810,7 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
     range.selectNodeContents(live);
     const liveText = range.getBoundingClientRect();
     const liveBox = live.getBoundingClientRect();
-    const watcherBox = watcher.getBoundingClientRect();
-    const statusBox = statusbar.getBoundingClientRect();
+    const topbarBox = topbar.getBoundingClientRect();
     const titleBox = title.getBoundingClientRect();
     return {
       title: title.textContent,
@@ -687,30 +818,28 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
       hiddenCrumbs: [
         ...topbar.querySelectorAll('.pc-topbar__crumb, .pc-topbar__separator, .pc-topbar__subject'),
       ].every((element) => element.getClientRects().length === 0),
+      floatingChrome: document.querySelectorAll('.canvas-chrome-root').length,
       controls,
       line3,
       live: {
         text: live.textContent?.trim(),
-        accessibleName: watcher.getAttribute('aria-label'),
-        labelCount: watcher.querySelectorAll('.pc-watcher__label').length,
-        dotVisible:
-          (watcher.querySelector('.pc-watcher__dot')?.getBoundingClientRect().width ?? 0) > 0,
+        title: live.getAttribute('title'),
+        announced: output.getAttribute('aria-live'),
+        labelCount: topbar.querySelectorAll('.pc-conn--watcher').length,
+        dotVisible: (live.querySelector('.pc-conn__dot')?.getBoundingClientRect().width ?? 0) > 0,
         textFits: liveText.width <= liveBox.width + 1 && liveBox.width > 0,
         inside:
-          liveBox.left >= watcherBox.left &&
-          liveBox.right <= watcherBox.right &&
-          liveBox.top >= watcherBox.top &&
-          liveBox.bottom <= watcherBox.bottom &&
-          watcherBox.left >= statusBox.left &&
-          watcherBox.right <= statusBox.right &&
-          watcherBox.top >= statusBox.top &&
-          watcherBox.bottom <= statusBox.bottom,
+          liveBox.left >= topbarBox.left &&
+          liveBox.right <= topbarBox.right &&
+          liveBox.top >= topbarBox.top &&
+          liveBox.bottom <= topbarBox.bottom,
       },
     };
   });
   assert.equal(mobile.title, 'Home');
   assert.equal(mobile.titleVisible, true);
   assert.equal(mobile.hiddenCrumbs, true, 'mobile shows only the current view title');
+  assert.equal(mobile.floatingChrome, 0, 'phones keep the top bar instead of floating chrome');
   assert.equal(mobile.controls.length, 1);
   for (const control of mobile.controls) {
     assert.equal(control.width, 44, `${control.label}: touch width`);
@@ -722,7 +851,8 @@ test('mobile touch reaches the palette instead of an overflowing capability cont
   }
   assert.deepEqual(mobile.live, {
     text: 'Live',
-    accessibleName: 'watcher connected',
+    title: 'connection: connected',
+    announced: 'polite',
     labelCount: 1,
     dotVisible: true,
     textFits: true,

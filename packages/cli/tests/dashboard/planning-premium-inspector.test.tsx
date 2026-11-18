@@ -24,7 +24,6 @@ import {
 const adapters = {
   loadSingleLetters: () => true,
   saveSingleLetters: () => {},
-  railPreference: { initialCompact: false, save: () => {} },
 };
 
 let fixtureSequence = 0;
@@ -127,8 +126,11 @@ describe('premium inspector repeated selection', () => {
         <UnifiedShell adapters={adapters} />
       </DashboardProviders>,
     );
-    expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
-    expect(rendered.container.querySelector('.pc-shell-inspector')).toBeNull();
+    // Phones keep the full-height inspector sheet; wider screens use the floating sidebar.
+    const phone = width < 600;
+    const role = phone ? 'dialog' : 'region';
+    expect(screen.queryByRole(role, { name: 'Inspector', exact: true })).toBeNull();
+    expect(document.querySelector('.pc-shell-inspector__content')).toBeNull();
     fireEvent.change(screen.getByRole('textbox', { name: 'Filter by id or title' }), {
       target: { value: current.manifest.selectedId },
     });
@@ -140,20 +142,19 @@ describe('premium inspector repeated selection', () => {
     // The performance probe's old selector now falls back to an empty expected title.
     expect(row.querySelector('.pc-work-item__title')).toBeNull();
     for (let iteration = 0; iteration < 20; iteration += 1) {
-      const existing = screen.queryByRole('dialog', {
+      const existing = screen.queryByRole(role, {
         name: 'Inspector',
       });
       if (existing) {
         fireEvent.click(
-          within(existing).getByRole('button', {
-            name: 'Close inspector',
-            exact: true,
-          }),
+          phone
+            ? within(existing).getByRole('button', { name: 'Close inspector', exact: true })
+            : screen.getByRole('button', { name: 'Close sidebar', exact: true }),
         );
       }
-      expect(screen.queryByRole('dialog', { name: 'Inspector', exact: true })).toBeNull();
+      expect(screen.queryByRole(role, { name: 'Inspector', exact: true })).toBeNull();
       await act(async () => row.click());
-      const panel = screen.getByRole('dialog', {
+      const panel = screen.getByRole(role, {
         name: 'Inspector',
       });
       await findDetailReady(panel);
@@ -172,9 +173,13 @@ describe('premium inspector repeated selection', () => {
       }
       expect(row.dataset.selected).toBe('true');
       expect(row.isConnected).toBe(true);
-      expect(panel.classList.contains('pc-inspector-sheet')).toBe(true);
-      expect(panel.getAttribute('aria-modal')).toBe(width < 900 ? 'true' : null);
-      expect(rendered.container.contains(panel)).toBe(false);
+      if (phone) {
+        expect(panel.classList.contains('pc-inspector-sheet')).toBe(true);
+        expect(panel.getAttribute('aria-modal')).toBe('true');
+      } else {
+        expect(panel.closest('.canvas-chrome-sidebar')).not.toBeNull();
+      }
+      expect(rendered.container.querySelector('main')?.contains(panel)).toBe(false);
     }
     expect(fetcher).toHaveBeenCalledTimes(1);
   });

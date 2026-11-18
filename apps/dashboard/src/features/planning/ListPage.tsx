@@ -33,8 +33,10 @@ import {
 import {
   browserListPreferences,
   clearInspector,
+  LIST_TOOL_SHORTCUTS,
   type ListPreferenceAdapter,
   type PlanningView,
+  type RouteTool,
   takeListStatus,
   useInspectorStore,
   useListKeyboardWindow,
@@ -44,6 +46,7 @@ import {
   useListScrollAnchor,
   usePlanningCopy,
   usePlanningShortcuts,
+  usePublishRouteTools,
 } from './planning-list-window.js';
 import { type PlanningModelNode, planningDetailHref, planningDisplayId } from './planning-model.js';
 import {
@@ -287,6 +290,57 @@ export function ListPage({
     if (selected.some((id) => !existing.has(id)))
       setSelected(selected.filter((id) => existing.has(id)));
   }, [metadata, selected, setSelected]);
+  const collapseActiveGroup = () => {
+    const key =
+      appearances.find((entry) => entry.node.id === selectedId)?.group.key ??
+      grouped.find((group) => !collapsedGroups.includes(group.key))?.key;
+    if (key && !collapsedGroups.includes(key)) setCollapsedGroups((groups) => [...groups, key]);
+  };
+  const groupTool = (groupBy: 'spec' | 'status' | 'type', label: string): RouteTool => ({
+    id: `list.group.${groupBy}`,
+    label,
+    group: 'group-by',
+    shortcut:
+      LIST_TOOL_SHORTCUTS[
+        groupBy === 'spec' ? 'groupSpec' : groupBy === 'status' ? 'groupStatus' : 'groupType'
+      ],
+    active: effectiveView.groupBy === groupBy,
+    run: () => setPresentation({ ...effectiveView, groupBy }),
+  });
+  usePublishRouteTools(
+    model && all.length > 0
+      ? [
+          groupTool('spec', 'Spec'),
+          groupTool('status', 'Status'),
+          groupTool('type', 'Type'),
+          {
+            id: 'list.filter',
+            label: 'Filter',
+            icon: 'filter',
+            shortcut: LIST_TOOL_SHORTCUTS.filter,
+            run: () =>
+              rootRef.current
+                ?.querySelector<HTMLInputElement>('input[aria-label*="Filter"]')
+                ?.focus(),
+          },
+          {
+            id: 'list.density',
+            label: compact ? 'Comfortable density' : 'Compact density',
+            icon: 'rows-3',
+            shortcut: LIST_TOOL_SHORTCUTS.density,
+            active: compact,
+            run: () => changeDensity(!compact),
+          },
+          {
+            id: 'list.collapse',
+            label: 'Collapse group',
+            icon: 'chevron-up',
+            shortcut: LIST_TOOL_SHORTCUTS.collapse,
+            run: collapseActiveGroup,
+          },
+        ]
+      : [],
+  );
   if (!model) {
     return <PlanningRefusal routeKind="planning.list" title="Planning cannot be trusted" />;
   }

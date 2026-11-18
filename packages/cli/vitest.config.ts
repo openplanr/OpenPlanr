@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: '.',
-    setupFiles: ['tests/setup/isolate-user-state.ts'],
+    setupFiles: ['tests/setup/isolate-user-state.ts', 'tests/setup/dashboard-dom.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],
     exclude: [
       '**/node_modules/**',

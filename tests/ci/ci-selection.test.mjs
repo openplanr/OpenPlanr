@@ -104,7 +104,7 @@ test('Browser selects only the lanes a change reaches', () => {
   });
   assert.deepEqual(selectLanes(['packages/canvas/src/camera.ts']), {
     canvas: true,
-    dashboard: false,
+    dashboard: true,
     artifact: false,
   });
   assert.deepEqual(selectLanes(['packages/protocol/src/index.mjs']), {

@@ -188,7 +188,7 @@ function boardKeyRequest(
     request as CustomEvent<{ event: KeyboardEvent; target: Element | null }>
   ).detail;
   const row = source?.closest<HTMLElement>('[data-keyboard-item]');
-  if (!row && !source?.closest('.pc-shell-inspector, .pc-inspector-sheet, .pc-selection-bar'))
+  if (!row && !source?.closest('.canvas-chrome-sidebar, .pc-inspector-sheet, .pc-selection-bar'))
     return;
   const key = event.key.toLowerCase();
   if (key === 'c') {

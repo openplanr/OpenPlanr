@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
+import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installKeyboardCoordinator,
   type KeyboardContext,
+  registerCanvasKeys,
 } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
+import { usePublishRouteTools } from '../../../../apps/dashboard/src/features/shell/route-tools.js';
 
 const dispose: Array<() => void> = [];
 
@@ -522,7 +525,7 @@ describe('dashboard keyboard coordinator', () => {
     context.selectedId = vi.fn(() => 'b');
     document.body.insertAdjacentHTML(
       'beforeend',
-      '<aside class="pc-shell-inspector"><button>Close inspector</button></aside>',
+      '<aside class="canvas-chrome-sidebar"><button>Close sidebar</button></aside>',
     );
     const button = document.querySelector('aside button') as HTMLButtonElement;
     const activate = vi.fn();
@@ -645,49 +648,65 @@ describe('dashboard keyboard coordinator', () => {
     expect(document.activeElement).toBe(item('c'));
   });
 
-  it('navigates only connected Graph neighbours with stable geometric and ID ordering', () => {
+  it('forwards Graph stage keys to the canvas first and dispatches each key once', () => {
     const { item, context } = fixture(
-      `<section data-route-kind="planning.graph" data-graph-focus="center">${row('center', 'data-x="0" data-y="0" data-neighbours="left&#10;right-a&#10;right-b&#10;up&#10;down"')}${row('left', 'data-x="-2" data-y="0"')}${row('right-b', 'data-x="2" data-y="0"')}${row('right-a', 'data-x="2" data-y="0"')}${row('up', 'data-x="0" data-y="-2"')}${row('down', 'data-x="0" data-y="2"')}${row('unconnected', 'data-x="1" data-y="0"')}</section>`,
+      `<section data-route-kind="planning.graph" data-graph-focus="center"><div class="canvas-stage">${row('center')}${row('next')}</div></section>`,
     );
-    key(item('center'), 'ArrowRight');
-    expect(document.activeElement).toBe(item('right-a'));
-    key(item('center'), 'ArrowLeft');
-    expect(document.activeElement).toBe(item('left'));
+    const stageListener = vi.fn();
+    item('center').closest('.canvas-stage')?.addEventListener('keydown', stageListener);
+    const canvas = vi.fn((event: KeyboardEvent) => {
+      if (!event.key.startsWith('Arrow')) return false;
+      event.preventDefault();
+      return true;
+    });
+    dispose.push(registerCanvasKeys(canvas));
+    const arrow = key(item('center'), 'ArrowRight');
+    expect(canvas).toHaveBeenCalledOnce();
+    expect(arrow.defaultPrevented).toBe(true);
+    expect(stageListener).not.toHaveBeenCalled();
+    expect(document.activeElement).not.toBe(item('next'));
+    expect(context.announce).not.toHaveBeenCalled();
     const focused = vi.fn();
     const cleared = vi.fn();
     context.root.addEventListener('graph-focus', focused);
     context.root.addEventListener('graph-clear-focus', cleared);
+    // F fits the selection through the Graph's Fit tool and leaves the focus scope alone.
+    const fit = vi.fn();
+    const tools = renderHook(() =>
+      usePublishRouteTools([{ id: 'graph.fit', label: 'Fit selection', run: fit }]),
+    );
     key(item('center'), 'f');
-    expect(focused).toHaveBeenCalledOnce();
-    expect(focused.mock.calls[0][0].detail).toEqual({ id: 'center' });
-    expect(document.activeElement).toBe(item('center'));
+    expect(canvas).toHaveBeenCalledTimes(2);
+    expect(fit).toHaveBeenCalledOnce();
+    expect(focused).not.toHaveBeenCalled();
+    tools.unmount();
     key(item('center'), 'Escape');
+    key(item('center'), 'Enter');
+    expect(canvas).toHaveBeenCalledTimes(2);
     expect(cleared).toHaveBeenCalledOnce();
     expect(context.root.querySelector('[data-graph-focus]')).toBeNull();
     expect(context.announce).toHaveBeenLastCalledWith('Graph focus cleared');
   });
 
-  it('orders vertical Graph neighbours by y then canonical ID and reports absent directions', () => {
-    const { item, context } = fixture(
-      `<section data-route-kind="planning.graph" data-graph-focus="center">${row('center', 'data-x="0" data-y="0" data-neighbours="up&#10;down-b&#10;down-a"')}${row('up', 'data-x="0" data-y="-2"')}${row('down-b', 'data-x="0" data-y="2"')}${row('down-a', 'data-x="0" data-y="2"')}</section>`,
+  it('leaves keys outside the canvas stage to the coordinator', () => {
+    const { item } = fixture(
+      `<section data-route-kind="planning.graph"><div class="canvas-stage"></div>${row('a')}${row('b')}</section>`,
     );
-    key(item('center'), 'ArrowUp');
-    expect(document.activeElement).toBe(item('up'));
-    key(item('center'), 'ArrowDown');
-    expect(document.activeElement).toBe(item('down-a'));
-    key(item('center'), 'ArrowLeft');
-    expect(document.activeElement).toBe(item('down-a'));
-    expect(context.announce).toHaveBeenLastCalledWith('No item in that direction.');
+    const canvas = vi.fn(() => true);
+    dispose.push(registerCanvasKeys(canvas));
+    key(item('a'), 'ArrowDown');
+    expect(canvas).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(item('b'));
   });
 
-  it('explains Graph focus without selection and lets inspector close before clearing Graph focus', () => {
+  it('explains Graph fit without selection and lets inspector close before clearing Graph focus', () => {
     const closeInspector = vi.fn(() => true);
     const { context, root } = fixture(
       '<section data-route-kind="planning.graph"><div tabindex="0" data-graph-focus="true"></div></section>',
       { closeInspector },
     );
     key(document.body, 'f');
-    expect(context.announce).toHaveBeenLastCalledWith('Select a Graph node to focus.');
+    expect(context.announce).toHaveBeenLastCalledWith('Select a Graph node to fit.');
     key(document.body, 'Escape');
     expect(closeInspector).toHaveBeenCalledTimes(1);
     expect(root.querySelector('[data-graph-focus]')).not.toBeNull();

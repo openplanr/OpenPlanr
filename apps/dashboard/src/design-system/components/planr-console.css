@@ -2047,114 +2047,6 @@ button.pc-tally__cell:focus-visible {
 }
 
 /* ===== dependency graph + outline ===== */
-.pc-graph {
-  scroll-padding: 24px 180px 110px 24px;
-  position: relative;
-  margin: 0;
-  overflow: auto;
-  background-color: var(--pc-graph-canvas);
-  background-image: radial-gradient(var(--pc-graph-grid) 1px, transparent 1px);
-  background-size: 16px 16px;
-  border: 1px solid var(--pc-border-default);
-  border-radius: var(--pc-radius-md);
-}
-.pc-graph-workspace {
-  position: relative;
-  min-width: 0;
-}
-.pc-graph-controls {
-  --pc-graph-control-size: 30px;
-  margin: 0;
-  padding: 0 0 8px;
-  border: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-height: var(--pc-graph-control-size);
-}
-.pc-graph-controls button {
-  box-sizing: border-box;
-  min-width: var(--pc-graph-control-size);
-  height: var(--pc-graph-control-size);
-  min-height: var(--pc-graph-control-size);
-  padding: 0 10px;
-  color: var(--pc-text-primary);
-  font: inherit;
-  background: var(--pc-surface-panel);
-  border: 1px solid var(--pc-border-default);
-  border-radius: var(--pc-radius-sm);
-  cursor: pointer;
-}
-.pc-graph-controls button[aria-label] {
-  width: var(--pc-graph-control-size);
-  padding-inline: 0;
-}
-.pc-graph-controls button:hover:not(:disabled) {
-  background: var(--pc-surface-hover);
-  border-color: var(--pc-border-strong);
-}
-.pc-graph-controls button:active:not(:disabled) {
-  background: var(--pc-surface-selected);
-}
-.pc-graph-controls button:disabled {
-  color: var(--pc-text-tertiary);
-  cursor: not-allowed;
-}
-.pc-graph-controls output {
-  min-width: 48px;
-  color: var(--pc-text-secondary);
-  font: var(--pc-type-mono-sm);
-  text-align: center;
-}
-.pc-graph:focus-visible,
-.pc-graph-controls button:focus-visible,
-.pc-graph-minimap:focus-visible {
-  outline: 2px solid var(--pc-focus-ring);
-  outline-offset: 2px;
-}
-.pc-graph__canvas,
-.pc-graph__content {
-  position: relative;
-}
-.pc-graph__content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: top left;
-}
-.pc-graph-minimap {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  width: 148px;
-  height: 88px;
-  padding: 5px;
-  background: var(--pc-surface-panel);
-  border: 1px solid var(--pc-border-strong);
-  border-radius: var(--pc-radius-sm);
-  box-shadow: var(--pc-shadow-sm);
-  cursor: crosshair;
-}
-.pc-graph-minimap:hover {
-  border-color: var(--pc-border-accent);
-}
-.pc-graph-minimap:active {
-  background: var(--pc-surface-selected);
-}
-.pc-graph-minimap svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.pc-graph-minimap__nodes {
-  fill: var(--pc-text-secondary);
-}
-.pc-graph-minimap__viewport {
-  fill: var(--pc-focus-halo);
-  stroke: var(--pc-accent);
-  stroke-width: 2px;
-}
 .pc-graph__ranks {
   position: absolute;
   inset: 0 0 auto;
@@ -2172,35 +2064,6 @@ button.pc-tally__cell:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   transform: translateX(-50%);
-}
-.pc-graph__edges {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.pc-graph__edge {
-  fill: none;
-  stroke: var(--pc-graph-edge);
-  stroke-width: 1.25;
-  opacity: 0.38;
-  transition:
-    opacity var(--pc-dur-fast) var(--pc-ease-standard),
-    stroke var(--pc-dur-fast) var(--pc-ease-standard);
-}
-.pc-graph__edge[data-active="true"] {
-  stroke: var(--pc-graph-edge-active);
-  stroke-width: 1.75;
-  opacity: 1;
-}
-.pc-graph__edge[data-blocked="true"] {
-  stroke: var(--pc-graph-edge-blocked);
-  stroke-dasharray: 4 3;
-  opacity: 0.72;
-}
-.pc-graph[data-tracing="true"] .pc-graph__edge:not([data-active="true"]) {
-  opacity: 0.08;
 }
 .pc-graph-node {
   position: absolute;
@@ -2222,7 +2085,7 @@ button.pc-tally__cell:focus-visible {
   cursor: pointer;
   transition: var(--pc-transition-ui);
 }
-.pc-graph[data-tracing="true"] .pc-graph-node:not([data-related="true"]),
+.pc-graph-stage[data-tracing="true"] .pc-graph-node:not([data-related="true"]),
 .pc-graph-node[data-dimmed="true"] {
   border-style: dashed;
   box-shadow: none;
@@ -2248,9 +2111,6 @@ button.pc-tally__cell:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pc-graph__edge[data-kind="depends_on"] {
-  stroke-dasharray: 5 4;
-}
 .pc-graph-node:focus-visible {
   border-color: var(--pc-accent);
   outline: 2px solid var(--pc-focus-ring);
@@ -2266,32 +2126,26 @@ button.pc-tally__cell:focus-visible {
 .pc-graph-node[data-blocked="true"] {
   border-color: var(--pc-astate-failed-border);
 }
-.pc-graph-node__dot,
-.pc-graph-outline__dot {
+.pc-graph-node__dot {
   width: 7px;
   height: 7px;
   flex: 0 0 auto;
   border-radius: 2px;
   background: var(--pc-type-other);
 }
-.pc-graph-node__dot[data-type="epic"],
-.pc-graph-outline__dot[data-type="epic"] {
+.pc-graph-node__dot[data-type="epic"] {
   background: var(--pc-type-epic);
 }
-.pc-graph-node__dot[data-type="feature"],
-.pc-graph-outline__dot[data-type="feature"] {
+.pc-graph-node__dot[data-type="feature"] {
   background: var(--pc-type-feature);
 }
-.pc-graph-node__dot[data-type="story"],
-.pc-graph-outline__dot[data-type="story"] {
+.pc-graph-node__dot[data-type="story"] {
   background: var(--pc-type-story);
 }
-.pc-graph-node__dot[data-type="task"],
-.pc-graph-outline__dot[data-type="task"] {
+.pc-graph-node__dot[data-type="task"] {
   background: var(--pc-type-task);
 }
-.pc-graph-node__dot[data-type="spec"],
-.pc-graph-outline__dot[data-type="spec"] {
+.pc-graph-node__dot[data-type="spec"] {
   background: var(--pc-type-spec);
 }
 .pc-graph-node__code {
@@ -2307,72 +2161,22 @@ button.pc-tally__cell:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pc-graph-outline {
-  padding: 4px 0;
-}
-.pc-graph-outline__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pc-graph-outline__list .pc-graph-outline__list {
-  margin-left: 9px;
-  padding-left: 14px;
-  border-left: 1px solid var(--pc-border-subtle);
-}
 .pc-graph-outline__row {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  width: 100%;
+  display: grid;
   min-width: 0;
-  min-height: 66px;
-  padding: 8px 12px;
-  font: inherit;
-  font-size: var(--pc-text-sm);
-  text-align: left;
-  color: inherit;
-  background: none;
-  border: 0;
-  border-radius: var(--pc-radius-sm);
-}
-button.pc-graph-outline__row {
-  cursor: pointer;
-}
-button.pc-graph-outline__row:hover {
-  background: var(--pc-surface-hover);
-}
-button.pc-graph-outline__row:focus-visible {
-  outline: 2px solid var(--pc-focus-ring);
-  outline-offset: 2px;
-}
-.pc-graph-outline__row[data-selected="true"] {
-  background: var(--pc-surface-selected);
 }
 .pc-graph-outline__id {
-  flex: 0 0 auto;
   font-family: var(--pc-font-mono);
   font-size: var(--pc-text-2xs);
   color: var(--pc-text-tertiary);
 }
-.pc-graph-outline__label {
-  min-width: 0;
+.pc-graph-outline__row > span {
   overflow: hidden;
-  color: var(--pc-text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pc-graph-outline__relationships {
-  margin: 0;
-  padding: 0 12px 10px;
-  color: var(--pc-text-secondary);
-  font-size: var(--pc-text-sm);
-}
-.pc-graph-outline__blocked {
-  font-family: var(--pc-font-mono);
-  font-size: var(--pc-text-2xs);
-  color: var(--pc-astate-failed-fg);
+.pc-graph-outline__label {
+  color: var(--pc-text-primary);
 }
 .pc-graph-legend {
   display: flex;
@@ -2997,9 +2801,6 @@ button.pc-work-item:disabled {
     --pc-hit-block: 100%;
     --pc-hit-y: -100%;
   }
-  .pc-graph-controls {
-    --pc-graph-control-size: 44px;
-  }
   .pc-button,
   .pc-button[data-size="sm"],
   .pc-icon-button,
@@ -3097,8 +2898,6 @@ button.pc-work-item:disabled {
 
 @media (forced-colors: active) {
   .pc-graph-node:focus-visible,
-  .pc-graph-outline__row:focus-visible,
-  .pc-graph-controls button:focus-visible,
   .pc-graph-minimap:focus-visible {
     outline-color: Highlight;
   }
@@ -3121,18 +2920,20 @@ button.pc-work-item:disabled {
   background: var(--op-card);
 }
 
+/* Content-sized and centred under the floating panels, clear of the round help button. */
 .pc-selection-bar {
-  position: sticky;
+  position: fixed;
   z-index: 100;
-  bottom: 24px;
-  margin-inline: auto;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   box-sizing: border-box;
-  width: min(800px, calc(100% - 128px));
-  height: 56px;
-  padding: 7px 8px 7px 16px;
+  max-width: calc(100vw - 128px - 2 * var(--pc-chrome-gutter, 0px));
+  height: 40px;
+  padding: 0 6px 0 12px;
   border: 1px solid var(--op-line3);
   border-radius: 12px;
   background: var(--op-raised);
@@ -3174,8 +2975,8 @@ button.pc-work-item:disabled {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--op-line3);
   border-radius: 8px;
   background: transparent;
@@ -3184,9 +2985,8 @@ button.pc-work-item:disabled {
   cursor: pointer;
 }
 .pc-selection-bar .pc-selection-bar__copy {
-  border-color: var(--op-accent);
-  background: var(--op-accent);
-  color: var(--op-on-accent);
+  border-color: var(--op-accent-soft);
+  background: var(--op-accent-soft);
 }
 .pc-selection-bar .pc-selection-bar__clear {
   width: 40px;
@@ -3240,14 +3040,18 @@ button.pc-work-item:disabled {
   width: 10px;
   height: 10px;
 }
-@media (max-width: 899px), (pointer: coarse) {
+@media (pointer: coarse) {
+  .pc-selection-bar .pc-selection-bar__open {
+    display: inline-flex;
+  }
+}
+@media (max-width: 599px) {
   .pc-selection-bar {
-    position: fixed;
     left: 8px;
     right: 8px;
     bottom: 72px;
     transform: none;
-    width: auto;
+    max-width: none;
     height: auto;
     padding: 16px;
     border-radius: 16px;
@@ -3284,12 +3088,5 @@ button.pc-work-item:disabled {
   }
   .pc-selection-bar__copy kbd {
     display: none;
-  }
-}
-/* The tablet rail sits beside the bar, and only the status bar sits below it. */
-@media (min-width: 600px) and (max-width: 899px) {
-  .pc-selection-bar {
-    left: calc(var(--pc-rail-width) + 8px);
-    bottom: calc(var(--pc-statusbar-height) + 24px);
   }
 }
