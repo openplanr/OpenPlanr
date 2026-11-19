@@ -1,0 +1,125 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "operating-review",
+  "title": "From evidence to decisions",
+  "summary": "An example operating review combines available delivery, product and business evidence into a decision and action brief. The user selects the scope; missing evidence remains an explicit gap.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "architecture",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "left-right",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "delivery",
+      "label": "Delivery",
+      "kind": "primary-item",
+      "description": "Changes, tests, releases and known defects from the project.",
+      "semanticPosition": null
+    },
+    {
+      "id": "product",
+      "label": "Product",
+      "kind": "primary-item",
+      "description": "Available product usage and customer feedback relevant to this review.",
+      "semanticPosition": null
+    },
+    {
+      "id": "business",
+      "label": "Business",
+      "kind": "primary-item",
+      "description": "Available strategy, cost and operating information relevant to this review.",
+      "semanticPosition": null
+    },
+    {
+      "id": "review",
+      "label": "Operate",
+      "kind": "primary-item",
+      "description": "Apply the selected review lenses to the supplied evidence. Cite sources and identify gaps.",
+      "semanticPosition": null
+    },
+    {
+      "id": "brief",
+      "label": "Decision brief",
+      "kind": "primary-item",
+      "description": "Prioritized decisions and proposed actions for the owner to assess.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "delivery-review",
+      "from": "delivery",
+      "to": "review",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "product-review",
+      "from": "product",
+      "to": "review",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "business-review",
+      "from": "business",
+      "to": "review",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "review-brief",
+      "from": "review",
+      "to": "brief",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    }
+  ],
+  "emphasis": [
+    {
+      "targetId": "review",
+      "level": "primary"
+    }
+  ],
+  "accessibility": {
+    "title": "From evidence to decisions",
+    "description": "Delivery, product and business evidence feed an Operate review, which produces a decision brief.",
+    "readingOrder": [
+      "delivery",
+      "product",
+      "business",
+      "review",
+      "brief"
+    ]
+  },
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "documentDigest": "sha256:ec8bb5b4259f171e756354592adcd1735dfc1574a5e8d8dd03a07a5ffd86a0cc"
+}

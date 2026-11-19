@@ -8,10 +8,12 @@
 <h3 align="center">Close the loop from intent to delivery.</h3>
 
 <p align="center">
-  Your agent writes the code. OpenPlanr is the open harness around it:<br>
-  plans as files in your repository, checks before you merge, and a record of what shipped.<br>
+  Your agent writes the code. OpenPlanr is the open harness around it.<br>
+  Plans as files in your repo, checks before you merge, and a record of what shipped.<br>
   25+ skills for Claude Code, Codex, and Cursor, plus the deterministic <code>openplanr</code> CLI.
 </p>
+
+<p align="center"><strong>Plan. Ship and verify. Operate.</strong></p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm version" src="https://img.shields.io/npm/v/openplanr?style=flat-square&labelColor=08080C&color=237A72&label=openplanr"></a>
@@ -30,238 +32,179 @@
   <a href="SUPPORT.md">Support</a>
 </p>
 
+<p align="center">
+  <a href="docs/diagrams/closing-loop/closing-loop.svg">
+    <img alt="The loop closes: Plan, Design, Build, Review and Operate around OpenPlanr's teal loop." width="880" src="docs/diagrams/closing-loop/closing-loop.png">
+  </a>
+</p>
+
 ---
 
-## What it is
+## What the harness adds
 
-- **Skills, not a second model.** Every skill runs inside the coding agent you already use.
-  Skills and the openplanr CLI add no model calls or telemetry.
-  The CLI contacts the network only for features you invoke: Linear sync (linear.app), artifact
-  sharing (share.openplanr.dev) and company sign-in (api.openplanr.dev).
-- **Plans are files.** Specifications, user stories, tasks, and provenance live under `.planr/`
-  in your repository, reviewed and versioned like code.
-- **A deterministic CLI.** `openplanr` stores and validates planning files, renders diagrams and
-  reports, installs the skills into each host, diagnoses installations, and syncs with GitHub
-  Issues and Linear.
-- **One repository, MIT licensed.** Three npm packages: [`openplanr`](packages/cli) (the CLI and
-  host packages), [`planr-pipeline`](packages/pipeline) (the delivery pipeline), and
-  [`@openplanr/protocol`](packages/protocol) (schemas and registries).
+OpenPlanr gives your coding agent shared context, repeatable workflows, and a way to
+check the work against the request. Your agent uses its own model, tools, and permissions.
 
-OpenPlanr is not a hosted project tracker and does not replace your issue tracker. It closes the
-loop: the agent reads the plan before it changes code, and what it ships flows back as evidence
-for the next review.
+- **Context that stays with the code.** Keep plans and decisions beside
+  the code. Initialized projects store stories and tasks under `.planr/` as reviewable files.
+- **Skills for the work at hand.** Specify a feature, explore a design, implement a change,
+  investigate a bug, or review what shipped. Start with the skill your request needs.
+- **Checks with clear results.** The CLI validates planning structure and discovers the
+  repository checks relevant to a change. Your agent runs those checks and reports what
+  passed, failed, or remains unverified.
+
+Ordinary skills run in your current agent. The optional `delegate` workflow can hand an
+explicitly requested implementation to another coding agent. Planning validation and diagram
+rendering are deterministic local operations.
 
 ## Quick start
 
+Install the CLI:
+
 ```bash
 npm install -g openplanr
+```
 
-openplanr setup --runtime claude --scope user
-# Codex:  openplanr setup --runtime codex --scope user --skill-mode unified-plugin
-# Cursor: openplanr setup --runtime cursor --scope project
+Set up the host you use:
+
+| Host | Setup | Invoke a skill |
+| --- | --- | --- |
+| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` |
+| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` |
+| Cursor | `openplanr setup --runtime cursor --scope project` | Mention `planr-<skill>` in Composer |
+
+Run project-scoped setup from your project directory. Restart your coding agent after setup.
+
+Start with the work you need, using the skill prefix for your host:
+
+| You want to… | Start with |
+| --- | --- |
+| Shape an unclear feature | `spec` |
+| Explore a product interface | `design` |
+| Implement a clear change | `ship` |
+| Diagnose a bug | `investigate` |
+| Review the product and decide what is next | `operate` |
+
+For example, in Claude Code:
+
+```text
+/planr:ship "Add keyboard navigation to the settings menu"
+```
+
+Use `$planr:ship` in Codex or the `planr-ship` rule in Cursor. A direct change does not
+require a specification. Use `plan` when the change needs decomposition, and `spec` when
+requirements need clarification.
+
+To enable structured planning in a project:
+
+```bash
 cd your-project
 openplanr init
 ```
 
-Restart the coding agent so it loads the new skills, then start with a specification:
+OpenPlanr requires a supported Node.js version; see [package metadata](packages/cli/package.json).
+The [getting started guide](docs/getting-started.md) covers marketplace installation,
+other install methods, scopes, upgrades, and removal.
 
-```text
-/planr:spec "Add passwordless sign-in for existing accounts"     # Claude Code
-$planr:spec "Add passwordless sign-in for existing accounts"     # Codex
-```
+## Plan. Ship and verify. Operate.
 
-In Cursor, mention the `planr-spec` rule in Composer. Follow with `plan` to decompose the
-specification into stories and tasks, and `ship` to implement one task. Plan and ship stay
-separate steps that you invoke.
+The harness connects three kinds of work. Start where the request needs attention.
 
-Alternatives: `npx openplanr@latest setup` without a global install, or
-`curl -fsSL https://openplanr.dev/install.sh | sh` (`irm https://openplanr.dev/install.ps1 | iex`
-on Windows). OpenPlanr requires a supported Node.js version (see [package metadata](packages/cli/package.json)). The
-[getting started guide](docs/getting-started.md) covers scopes, what setup writes, and how to
-undo it.
+### Plan
 
-In Claude Code you can install the plugin from the public marketplace instead of running
-`openplanr setup --runtime claude`. Several skills call the `openplanr` CLI, so install it first:
+Shape intent, explore designs, and make the next work clear. Keep decisions and
+plans beside the code; use specifications, stories, and tasks when that structure helps.
 
-```text
-/plugin marketplace add openplanr/marketplace
-/plugin install planr@openplanr
-```
+### Ship and verify
 
-## How it works
+Implement the requested change, run the relevant checks, and review
+the result. Report what changed, what passed, and what remains unverified. `land` assesses
+readiness; `release` prepares versioning and release notes.
 
-<p align="center">
-  <a href="docs/diagrams/delivery-loop/delivery-loop.svg">
-    <img alt="The OpenPlanr delivery loop: you invoke the spec, plan, ship, and land skills in your coding agent; spec and plan write the plans under .planr/ in your repository, ship reads the plan first and implements one task, and land assesses release readiness before you merge; the openplanr CLI validates the planning files offline and keeps GitHub Issues or Linear in step; review skills and operate readouts return the evidence for the next request" width="880" src="docs/diagrams/delivery-loop/delivery-loop.svg">
-  </a>
-</p>
-
-Reasoning stays in the host agent. The CLI never calls a model; it validates what the agent
-wrote, renders it, and keeps trackers in step.
-
-### One feature, end to end
-
-<p align="center">
-  <a href="docs/diagrams/one-feature/one-feature.svg">
-    <img alt="One feature from specification to operate readout: you invoke spec, plan, ship, land, release, and operate in your coding agent; the agent writes the specification, stories, and tasks into your repository, reads the plan before it implements each task, and returns the merge commands; openplanr sync validates the planning files offline; you open the PR and merge on GitHub" width="880" src="docs/diagrams/one-feature/one-feature.svg">
-  </a>
-</p>
-
-The plan is a file in your repository that you review like code, and the agent reads it before
-it changes code. `ship` implements one task at a time, verified and small enough to review as
-one pull request, and the CLI validates the planning files offline, never by a model.
-
-## Capabilities
-
-Plan. Design. Build. Review. Operate. Every step is a skill the agent selects from its
-description, or that you invoke by name.
-
-| Family | Skills | CLI utility the skill may call |
-| --- | --- | --- |
-| Plan and specify | `spec`, `plan`, `plan-review`, `sprint` | `openplanr spec`, `openplanr sprint` |
-| Implement | `ship` (dispatches native role agents in Claude Code) | — |
-| Review and QA | `browser-qa` | — |
-| Design | `design`, `design-loop`, `design-review` | `openplanr artifact` |
-| Diagrams | `diagram` | `openplanr diagram` |
-| Artifact reviews | `artifact` | `openplanr artifact` |
-| Land and release | `land`, `release` | `openplanr land` |
-| Setup and diagnostics | `doctor`, `investigate`, `connect` | `openplanr doctor`, `openplanr upgrade` |
-| Status, routing, and sync | `status`, `sync`, `share`, `dashboard`, `openplanr` (routes a request to the best skill) | `openplanr status`, `openplanr sync`, `openplanr dashboard` |
-| Operate | `operate` with `ceo`, `cto`, `cpo`, `cmo`, `coo`, `challenger`, and `chair` reviews | `openplanr operate` |
-
-Invoke a skill as `/planr:<skill>` in Claude Code or `$planr:<skill>` in Codex; in Cursor,
-mention the `planr-<skill>` rule. `share` and `connect` run only when you invoke them. The [skill catalog](docs/generated/skills.md) is generated from
-the registry and lists every trigger, deferral, and packaged reference.
-
-## Diagram engine
-
-<p align="center">
-  <a href="docs/diagrams/planning-artifacts/planning-artifacts.svg">
-    <img alt="Planning artifacts: the spec, plan, and ship skills write the specification, the stories and tasks, and the provenance log under .planr/; the openplanr CLI validates them offline and keeps GitHub Issues and Linear in step" width="880" src="docs/diagrams/planning-artifacts/planning-artifacts.svg">
-  </a>
-</p>
-
-<p align="center"><sub>Rendered by <code>openplanr diagram render</code> from
-<a href="docs/diagrams/planning-artifacts/planning-artifacts.planr-diagram.json">a canonical document</a>,
-as are the diagrams under How it works; verified in CI by <code>openplanr diagram check</code>.
-The <code>openplanr</code> theme adapts each SVG to the viewer's light or dark scheme.</sub></p>
-
-`planr-diagram` turns intent into a canonical semantic document, and the offline engine lays
-it out deterministically across 39 grammars (architecture, sequence, ER, Gantt, story map,
-Wardley, and more). Every render produces SVG, PNG, accessible HTML, quality and fidelity
-reports, and a manifest that binds the set.
-
-```bash
-openplanr diagram gallery                                          # list grammars
-openplanr diagram render ./architecture.planr-diagram.json --json  # render a set
-openplanr diagram check ./diagrams/architecture/architecture.manifest.json --json
-```
-
-See [authoring and verifying diagrams](docs/diagrams/authoring.md).
-
-## Hosts
-
-| Host | Install | Invoke | Notes |
-| --- | --- | --- | --- |
-| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin with native role agents for `plan` and `ship` |
-| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | OpenPlanr plugin; `--skill-mode direct` installs individual skills instead |
-| Cursor | `openplanr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule | Project rules under `.cursor/rules/` |
-
-### Connections
-
-Skills reach chat, project trackers and source control through connectors you add
-to your host. OpenPlanr bundles no connectors; they and their credentials live in your host.
-Two optional features need a token: Linear sync (`openplanr linear`) and company sign-in
-(`openplanr company login`). Only when you use them does OpenPlanr store a token, in your OS
-keychain, or in an encrypted file at `~/.planr/credentials.enc` if you set
-`PLANR_CREDENTIAL_FILE_PASSPHRASE`. For Linear you can instead set `PLANR_LINEAR_TOKEN` and
-nothing is stored. Tokens are sent only to Linear or to the company server you sign in to.
-`openplanr company logout` removes company tokens. Run `connect` to see what is connected
-and how to add the rest, and `share` to post an update to chat as a draft you approve. See
-[connections](docs/connections.md) and the per-host [connect steps](docs/generated/connectors.md).
-
-`openplanr rules generate` adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md`
-so the agent knows every skill and when to reach for it. See the
-[host matrix](docs/skills/host-matrix.md) for what each projection may and may not change.
-
-## Architecture
+The CLI can help discover what to run; your agent executes the checks and reports the results.
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"DM Sans, ui-sans-serif, system-ui, sans-serif","fontSize":"14px","primaryColor":"#5EEAD4","primaryTextColor":"#08080C","primaryBorderColor":"#237A72","secondaryColor":"#F5F7F7","secondaryTextColor":"#08080C","secondaryBorderColor":"#237A72","tertiaryColor":"#F5F7F7","tertiaryTextColor":"#08080C","tertiaryBorderColor":"#237A72","lineColor":"#237A72","textColor":"#08080C","edgeLabelBackground":"#F5F7F7","clusterBkg":"#F5F7F7","clusterBorder":"#237A72","noteBkgColor":"#F5F7F7","noteTextColor":"#08080C","noteBorderColor":"#237A72"}}}%%
 flowchart LR
-    subgraph sources["Canonical sources"]
-        direction TB
-        skills["skills/ · agents/"]
-        protocol["@openplanr/protocol<br/>schemas · registries"]
-    end
-    generate(["npm run generate"])
-    subgraph packages["Published packages"]
-        direction TB
-        cli["openplanr<br/>CLI + host packages"]
-        pipeline["planr-pipeline<br/>delivery pipeline"]
-    end
-    subgraph hosts["Installed into hosts"]
-        direction TB
-        claude["Claude Code plugin"]
-        codex["Codex plugin"]
-        cursor["Cursor rules"]
-    end
-    skills --> generate
-    protocol --> generate
-    generate --> cli
-    generate --> pipeline
-    protocol --> pipeline
-    pipeline -. exact optional dependency .-> cli
-    cli --> claude
-    cli --> codex
-    cli --> cursor
+    CLI["openplanr CLI<br/>Discover required checks"]
+    AGENT["Your agent<br/>Run tests and review"]
+    RESULTS["Report results<br/>Passed · Failed · Not run"]
+    CLI --> AGENT --> RESULTS
 ```
 
-One canonical skill graph is generated into host-native projections; generated files are
-outputs, never sources. The CLI composes five command groups (foundation, planning, delivery,
-operations, intelligence) over the Protocol contracts, and internal workspaces (`operate`,
-`artifact`, `design`, `skill-runtime`, the dashboard) are projected into the public packages at
-generation time. See the [architecture guide](docs/architecture/README.md).
+### Operate
 
-## Documentation
+Review product, delivery, and operating evidence across seven perspectives.
+Turn those findings into a decision and action brief that informs the next work.
 
-**Use**
-[Docs](https://openplanr.dev/docs) ·
-[Getting started](docs/getting-started.md) ·
-[Skill catalog](docs/generated/skills.md) ·
-[Connections](docs/connections.md) ·
-[CLI reference](packages/cli/docs/CLI.md) ·
-[Troubleshooting](packages/cli/docs/TROUBLESHOOTING.md) ·
-[Diagrams](docs/diagrams/authoring.md)
 
-**Contribute**
-[Contributing](CONTRIBUTING.md) ·
-[Architecture](docs/architecture/README.md) ·
-[Working from a checkout](docs/contributing/dogfooding.md) ·
-[Skill authoring](docs/skills/authoring.md) ·
-[Releasing](docs/RELEASING.md)
+For example, bring the delivery, product, and business evidence relevant to your review:
 
-**Integrate**
-[Protocol package](packages/protocol/README.md) ·
-[Pipeline package](packages/pipeline/README.md) ·
-[Host matrix](docs/skills/host-matrix.md) ·
-[Skill versioning](docs/skills/versioning-and-impact.md) ·
-[Verifying a release](docs/PROVENANCE.md)
+<p align="center">
+  <a href="docs/diagrams/operating-review/operating-review.svg">
+    <img alt="Delivery, product and business evidence feed an Operate review, which produces a decision brief." width="760" src="docs/diagrams/operating-review/operating-review.svg">
+  </a>
+</p>
+
+Supply the sources the review needs. Recommendations cite evidence or name the missing
+information; proposed actions remain yours to assess.
+
+These workflows are separately invoked. They do not form an automatically running pipeline;
+merging, publishing, and deployment require separate authorization.
+
+## Skills
+
+| Work | Skills |
+| --- | --- |
+| Specify and plan | `spec`, `plan`, `plan-review`, `sprint` |
+| Design and visualize | `design`, `design-loop`, `design-review`, `diagram`, `artifact` |
+| Implement and investigate | `ship`, `investigate` |
+| Delegate explicitly | `delegate` |
+| Verify and prepare delivery | `browser-qa`, `land`, `release` |
+| Inspect and maintain | `status`, `sync`, `dashboard`, `doctor` |
+| Connect and communicate | `connect`, `share` |
+| Review operations | `operate`, `ceo-review`, `cto-review`, `cpo-review`, `cmo-review`, `coo-review`, `challenger-review`, `chair-review` |
+| Find the right workflow | `openplanr` |
+
+Invoke `/planr:<skill>` in Claude Code, `$planr:<skill>` in Codex, or the `planr-<skill>`
+rule in Cursor. The [skill catalog](docs/generated/skills.md) describes every skill and
+when to use it.
+
+The `diagram` skill creates architecture, process, sequence, data, and other diagrams.
+The CLI renders and checks their source and output files locally. The operating-review
+diagram above is generated from [this editable document](docs/diagrams/operating-review/operating-review.planr-diagram.json).
+See [diagram authoring](docs/diagrams/authoring.md) for supported formats and verification.
+
+## Optional connections
+
+Keep GitHub Issues or Linear in step with repository plans, or use the connectors installed
+in your agent for other services. Connected workflows require the relevant authentication;
+OpenPlanr does not bundle your host's connectors. See [connections](docs/connections.md)
+for setup, credentials, and data handling.
+
+## Repository and documentation
+
+This MIT-licensed monorepo contains the skills, CLI, delivery pipeline, and Protocol contracts.
+Start here:
+
+| Goal | Where to go |
+| --- | --- |
+| Use OpenPlanr | [Getting started](docs/getting-started.md), [CLI reference](packages/cli/docs/CLI.md), [troubleshooting](packages/cli/docs/TROUBLESHOOTING.md) |
+| Author skills or diagrams | [Skill authoring](docs/skills/authoring.md), [diagram authoring](docs/diagrams/authoring.md) |
+| Contribute code | [Contributing](CONTRIBUTING.md), [architecture and workspace ownership](docs/architecture/README.md), [working from a checkout](docs/contributing/dogfooding.md) |
+| Integrate with the contracts | [Protocol](packages/protocol/README.md), [pipeline](packages/pipeline/README.md), [host matrix](docs/skills/host-matrix.md) |
+| Maintain a release | [Release process](docs/RELEASING.md), [release verification](docs/PROVENANCE.md) |
 
 ## Community and license
 
-**Beta:** try OpenPlanr on one real feature and tell us what you'd change in the
-[beta discussion](https://github.com/openplanr/OpenPlanr/discussions/324).
-
-Ask questions and share what you built in
-[Discussions](https://github.com/openplanr/OpenPlanr/discussions); report bugs through the
-[issue forms](https://github.com/openplanr/OpenPlanr/issues/new/choose). [SUPPORT.md](SUPPORT.md)
-explains what to include. Security reports follow [SECURITY.md](SECURITY.md); participation
-follows the [code of conduct](CODE_OF_CONDUCT.md).
+Try OpenPlanr on a real feature and share your feedback in
+[Discussions](https://github.com/openplanr/OpenPlanr/discussions).
+Report bugs through the [issue forms](https://github.com/openplanr/OpenPlanr/issues/new/choose);
+[SUPPORT.md](SUPPORT.md) explains what to include. Security reports follow
+[SECURITY.md](SECURITY.md), and participation follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 OpenPlanr is [MIT licensed](LICENSE). The name and logo are covered by the
-[trademark policy](TRADEMARKS.md); the boundary between this repository and the hosted service
-is described in [COMMERCIAL.md](COMMERCIAL.md).
+[trademark policy](TRADEMARKS.md). [COMMERCIAL.md](COMMERCIAL.md) describes the boundary
+between this repository and the hosted service.
 
 Founded and maintained by Asem Abdo
 ([GitHub](https://github.com/AsemDevs) · [LinkedIn](https://www.linkedin.com/in/asemabdo/)).

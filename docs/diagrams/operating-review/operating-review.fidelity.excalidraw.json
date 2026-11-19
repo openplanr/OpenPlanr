@@ -5,7 +5,7 @@
   "documentVersion": "1.0.0",
   "digestAlgorithm": "sha256",
   "canonicalization": "rfc8785",
-  "diagramId": "delivery-loop",
+  "diagramId": "operating-review",
   "sourceFormat": "planr-diagram",
   "targetFormat": "excalidraw",
   "status": "unsupported",
@@ -19,5 +19,5 @@
   "notes": [
     "No editable file was emitted; canonical SVG, HTML, and PNG remain available."
   ],
-  "documentDigest": "sha256:3d1e7afc5db25d65e8ff87038109f7569522de44d485b8e483259d2f5bbce900"
+  "documentDigest": "sha256:47624b46506b5a869451322fb5f5a31e8adaf367c8b531f1656c1ef9ecd71cf3"
 }

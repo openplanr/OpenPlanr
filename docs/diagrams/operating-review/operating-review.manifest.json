@@ -1,0 +1,78 @@
+{
+  "kind": "diagram-manifest",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "operating-review",
+  "source": {
+    "path": "diagrams/operating-review/operating-review.planr-diagram.json",
+    "digest": "sha256:f75e2551df68c715ffc7b580365e605696c6c69ac897f7b2c627fd349d69c6f1"
+  },
+  "registry": {
+    "path": "registry/v1.6.0/diagram-grammars.json",
+    "digest": "sha256:f78d668b7cf01ba9c0dacbe64b6e7a1b19c6dc7e5855c9861594beb3d6984653",
+    "grammarId": "architecture",
+    "grammarVersion": "1.0.0"
+  },
+  "renderer": {
+    "id": "openplanr-semantic-svg-resvg",
+    "version": "1.5.0"
+  },
+  "theme": {
+    "id": "openplanr",
+    "version": "1.0.0"
+  },
+  "outputs": [
+    {
+      "path": "diagrams/operating-review/operating-review.assets.json",
+      "mediaType": "application/vnd.openplanr.diagram-assets+json",
+      "digest": "sha256:c766542c7f28dae8062fa4b6d104638b6688526b160c27eef628591e83f0f880",
+      "fidelity": "render-only"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.fidelity.excalidraw.json",
+      "mediaType": "application/vnd.openplanr.diagram-fidelity+json",
+      "digest": "sha256:e72ba21232e63da0ace292738a8be230f01e0f2ce8e4519f4714b7b1ddc6b4e5",
+      "fidelity": "unsupported"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.fidelity.mermaid.json",
+      "mediaType": "application/vnd.openplanr.diagram-fidelity+json",
+      "digest": "sha256:a43bfc924adda7d61ab7d20c72aaccfd188f1c438b314ee670d96122c1fab242",
+      "fidelity": "partial"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.html",
+      "mediaType": "text/html; charset=utf-8",
+      "digest": "sha256:b55fffdf78ff50b885db6d9a52454d375aacb758efab621dc52643e8eb2587a2",
+      "fidelity": "render-only"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.planr-diagram.json",
+      "mediaType": "application/vnd.openplanr.diagram+json",
+      "digest": "sha256:f75e2551df68c715ffc7b580365e605696c6c69ac897f7b2c627fd349d69c6f1",
+      "fidelity": "editable"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.png",
+      "mediaType": "image/png",
+      "digest": "sha256:79fd7d2ab3d7264c9225e1acb034f0c38e8e65e658f91fcfcc3be19761a22773",
+      "fidelity": "render-only"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.quality.json",
+      "mediaType": "application/vnd.openplanr.diagram-quality+json",
+      "digest": "sha256:8aa081bc5e2573272a752887225e4815ee20664dd4b3910a9f4896246e6bc1a4",
+      "fidelity": "render-only"
+    },
+    {
+      "path": "diagrams/operating-review/operating-review.svg",
+      "mediaType": "image/svg+xml; charset=utf-8",
+      "digest": "sha256:2f3048474b4d74b51232ec778914a81e72c743e9440312e408b10c54a864dd81",
+      "fidelity": "render-only"
+    }
+  ],
+  "documentDigest": "sha256:63513d75d99bce937af6344a08d5cb19d913a56795cb1de67d81a5577d50ab83"
+}
