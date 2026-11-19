@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.9.0
+
+### Minor Changes
+
+- 69c6870: From 600px wide, the dashboard's navigation, tools, status and inspector float over the page instead of taking fixed columns. The menu pill holds every view, search, keyboard shortcuts and the theme, and opens an optional navigation panel you can pin. The tool pill carries the view's controls with their shortcuts; on the List, 1 to 3 group by spec, status or type, F focuses the filter and D switches density. The action pill shows Read-only or Governed actions, the Live state and the sidebar toggle, which marks a selection. The sidebar has Inspector and Outline tabs and opens with Enter or the toggle. The round help button shows the build, branch, totals and shortcuts in place of the status bar. Alt+[ and Alt+] open the navigation panel and the sidebar, Alt+Z hides all chrome, and F6 moves between regions. Pinned panels are remembered per project. Phones keep the top bar, bottom navigation and full-height inspector.
+- 69c6870: The dashboard Graph fills the window and pans and zooms smoothly to thousands of items. Drag or scroll to move around; pinch or Ctrl/Cmd+scroll zooms around the pointer, including over cards, and never zooms the page. Below 40% zoom the Graph switches to an overview of the whole project. Lenses, type and done toggles and Fit sit in the tool pill, the focus summary in the navigation panel and the minimap in the bottom corner; clicking the minimap moves the view. F now fits the selection into view without changing the lens; focusing on an item's lineage is the Focus button in the navigation panel. On phones the Graph tools sit under the top bar and the minimap and outline are in More.
+
+### Patch Changes
+
+- d60b76d: Include the referenced design schemas when installing individual skills directly from the repository. Design, design-loop, design-review, and plan now include their complete declared resources without a build step.
+
 ## 3.8.0
 
 ### Minor Changes
