@@ -5,7 +5,7 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 
 | Package | Version | Path | Publication |
 |---|---:|---|---|
-| `openplanr` | 3.8.0 | `packages/cli` | public |
+| `openplanr` | 3.9.0 | `packages/cli` | public |
 | `planr-pipeline` | 0.65.0 | `packages/pipeline` | public |
 | `@openplanr/protocol` | 0.19.0 | `packages/protocol` | public |
 | `@openplanr/canvas` | 0.0.1 | `packages/canvas` | private |
