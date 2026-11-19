@@ -28,6 +28,11 @@ canonical owners during `npm run generate`. Their distribution copies are ignore
 by Git; canonical schemas, published exports, and projection manifests stay tracked.
 This is the reviewed migration from the previous checked-in projection policy.
 
+Source-installable skill folders retain their small generated schema documents in Git.
+GitHub skill installers copy these folders without running generation, so every declared
+resource must be present. Protocol remains the canonical schema owner; generation and
+drift checks keep these installable copies aligned with it.
+
 Run `npm ci`, `npm run generate`, and `npm run build` on a fresh checkout before
 running package consumers. Check mode verifies existing output and does not
 bootstrap missing distributions. Each packed package must work without sibling

@@ -10,7 +10,7 @@
 <p align="center">
   Your agent writes the code. OpenPlanr is the open harness around it.<br>
   Plans as files in your repo, checks before you merge, and a record of what shipped.<br>
-  25+ skills for Claude Code, Codex, and Cursor, plus the deterministic <code>openplanr</code> CLI.
+  25+ skills for Claude Code, Codex, and Cursor. Install the plugin or pick the skills you need.
 </p>
 
 <p align="center"><strong>Plan. Ship and verify. Operate.</strong></p>
@@ -53,31 +53,42 @@ check the work against the request. Your agent uses its own model, tools, and pe
   repository checks relevant to a change. Your agent runs those checks and reports what
   passed, failed, or remains unverified.
 
-Ordinary skills run in your current agent. The optional `delegate` workflow can hand an
-explicitly requested implementation to another coding agent. Planning validation and diagram
-rendering are deterministic local operations.
+OpenPlanr is available as a plugin and as individual skills. Install it through your
+coding agent's marketplace or normal skill installer. The companion `openplanr` CLI
+provides utilities for workflows that need them.
 
 ## Quick start
 
-Install the CLI:
+### Install the plugin or individual skills
 
-```bash
-npm install -g openplanr
+**Claude Code marketplace**
+
+```text
+/plugin marketplace add openplanr/marketplace
+/plugin install planr@openplanr
 ```
 
-Set up the host you use:
+This installs the `planr` plugin. Restart Claude Code, then invoke its skills as
+`/planr:<skill>`.
 
-| Host | Setup | Invoke a skill |
-| --- | --- | --- |
-| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` |
-| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` |
-| Cursor | `openplanr setup --runtime cursor --scope project` | Mention `planr-<skill>` in Composer |
+**Individual skills for Claude Code, Codex, Cursor, and other compatible hosts**
 
-Run project-scoped setup from your project directory. Restart your coding agent after setup.
+Use the standard [skills installer](https://github.com/vercel-labs/skills):
 
-Start with the work you need, using the skill prefix for your host:
+```bash
+npx skills add openplanr/OpenPlanr
+```
 
-| You want to… | Start with |
+Run this in your terminal to choose the skills and installation scope. The installer
+detects available coding agents and asks you to choose when needed. No flags are required.
+The [getting started guide](docs/getting-started.md) covers optional flags and
+CLI-managed plugin installation.
+
+### Use a skill
+
+Start with the work you need:
+
+| You want to… | Skill |
 | --- | --- |
 | Shape an unclear feature | `spec` |
 | Explore a product interface | `design` |
@@ -85,15 +96,45 @@ Start with the work you need, using the skill prefix for your host:
 | Diagnose a bug | `investigate` |
 | Review the product and decide what is next | `operate` |
 
-For example, in Claude Code:
+For example, with the Claude Code plugin:
 
 ```text
 /planr:ship "Add keyboard navigation to the settings menu"
 ```
 
-Use `$planr:ship` in Codex or the `planr-ship` rule in Cursor. A direct change does not
-require a specification. Use `plan` when the change needs decomposition, and `spec` when
-requirements need clarification.
+Individual skills retain their installed names, such as `planr-ship`; select that skill
+in your host. A direct change does not require a specification. Use `plan` when the
+change needs decomposition, and `spec` when requirements need clarification.
+
+### Add CLI utilities when a workflow needs them
+
+The CLI supports planning validation, diagram rendering, local studios, diagnostics,
+and integrations. Install it alongside your skills for those capabilities:
+
+```bash
+npm install -g openplanr
+```
+
+The OpenPlanr CLI requires a supported Node.js version; see
+[package metadata](packages/cli/package.json). It can also install and manage the host
+integration for you:
+
+<details>
+<summary>CLI-managed installation</summary>
+
+Run `openplanr setup` without flags for guided host, scope, and discovery-mode choices.
+For scripts, select the host explicitly:
+
+| Host | Setup | Invoke a skill |
+| --- | --- | --- |
+| Claude Code | `openplanr setup --runtime claude --scope user` | `/planr:<skill>` |
+| Codex | `openplanr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` |
+| Cursor | `openplanr setup --runtime cursor --scope project` | Mention the `planr-<skill>` rule |
+
+Run project-scoped setup from your project directory and restart your coding agent
+after setup. Choose one installation method per host to avoid duplicate skill entries.
+
+</details>
 
 To enable structured planning in a project:
 
@@ -101,10 +142,6 @@ To enable structured planning in a project:
 cd your-project
 openplanr init
 ```
-
-OpenPlanr requires a supported Node.js version; see [package metadata](packages/cli/package.json).
-The [getting started guide](docs/getting-started.md) covers marketplace installation,
-other install methods, scopes, upgrades, and removal.
 
 ## Plan. Ship and verify. Operate.
 
@@ -165,9 +202,11 @@ merging, publishing, and deployment require separate authorization.
 | Review operations | `operate`, `ceo-review`, `cto-review`, `cpo-review`, `cmo-review`, `coo-review`, `challenger-review`, `chair-review` |
 | Find the right workflow | `openplanr` |
 
-Invoke `/planr:<skill>` in Claude Code, `$planr:<skill>` in Codex, or the `planr-<skill>`
-rule in Cursor. The [skill catalog](docs/generated/skills.md) describes every skill and
-when to use it.
+Plugin installations use `/planr:<skill>` in Claude Code and `$planr:<skill>` in Codex.
+Individual skills use their installed names; CLI-managed Cursor rules use `planr-<skill>`.
+The [skill catalog](docs/generated/skills.md) describes every skill and when to use it.
+The optional `delegate` workflow hands an explicitly requested implementation to another
+coding agent; the other workflows use the current host.
 
 The `diagram` skill creates architecture, process, sequence, data, and other diagrams.
 The CLI renders and checks their source and output files locally. The operating-review

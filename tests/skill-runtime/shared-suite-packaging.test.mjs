@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -17,6 +18,25 @@ import { verifySuiteResources } from '../../scripts/skills/suite-verification.mj
 const root = resolve(import.meta.dirname, '../..');
 const registry = readSkillSourceRegistry({ repoRoot: root });
 const row = (id) => registry.skills.find(({ skillId }) => skillId === id);
+
+test('every skill copied from Git includes its resources without generation', async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'openplanr-source-skills-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const paths = execFileSync('git', ['ls-files', '-z', '--', 'skills/'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  execFileSync('git', ['checkout-index', `--prefix=${directory}/`, '-z', '--stdin'], {
+    cwd: root,
+    input: paths,
+  });
+  const sourceRegistry = readSkillSourceRegistry({ repoRoot: directory });
+  for (const registryRow of sourceRegistry.skills) {
+    await t.test(registryRow.skillId, () => {
+      assert.doesNotThrow(() => readStandardSkillPackage({ repoRoot: directory, registryRow }));
+    });
+  }
+});
 
 test('suite resources keep Operate and design skills free of helper scripts', () => {
   for (const id of [
