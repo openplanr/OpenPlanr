@@ -105,15 +105,11 @@ release/
 /packages/pipeline/lib/dashboard/operate-review-payload-safety.d.mts
 /packages/pipeline/lib/dashboard/operate-review-workspace-projection-v2.d.mts
 
-# Shared Design resources are copies; skill instructions and other scripts remain versioned.
+# Runtime copies stay ignored; source-installed skills keep their schema documents.
 /skills/planr-design/scripts/runtime/
-/skills/planr-design/schemas/
 /skills/planr-design-loop/scripts/runtime/
-/skills/planr-design-loop/schemas/
 /skills/planr-design-review/scripts/runtime/
-/skills/planr-design-review/schemas/
 /skills/planr-plan/scripts/runtime/
-/skills/planr-plan/schemas/
 /skills/planr-design-loop/scripts/design*.mjs
 /skills/planr-design-review/scripts/design*.mjs
 /skills/planr-design/scripts/design*.mjs
