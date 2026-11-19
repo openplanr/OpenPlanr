@@ -70,7 +70,7 @@ test('public onboarding states the supported Node.js line once and links the dia
   assert.match(read('README.md'), /requires a supported Node\.js version/u);
   assert.match(read('README.md'), /packages\/cli\/package\.json/u);
   assert.match(read('README.md'), /docs\/diagrams\/authoring\.md/u);
-  assert.match(read('README.md'), /docs\/diagrams\/planning-artifacts\/planning-artifacts\.svg/u);
+  assert.match(read('README.md'), /docs\/diagrams\/operating-review\/operating-review\.svg/u);
   for (const path of [
     'CONTRIBUTING.md',
     'docs/contributing/dogfooding.md',

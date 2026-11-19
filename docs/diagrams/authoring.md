@@ -10,7 +10,7 @@ Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
 [package metadata](../../packages/cli/package.json); CI verifies published packages on their supported Node.js 22 and 24 lines, and on Node.js 26
 without blocking until it becomes LTS.
 
-The committed showcase set under [`planning-artifacts/`](planning-artifacts/) is a complete
+The committed showcase set under [`operating-review/`](operating-review/) is a complete
 example: the canonical document, the rendered SVG, PNG, and HTML, the quality and fidelity
 reports, and the manifest that binds them. `npm run check:diagrams` verifies it in CI, so
 the diagram embedded in the root README can never drift from its source.
