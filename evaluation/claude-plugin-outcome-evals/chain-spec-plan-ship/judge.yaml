@@ -1,0 +1,21 @@
+schema: 1
+facts: |
+  A customer email asks to see notes due today or in the next two days, plus overdue notes,
+  with overdue notes first, leaving out notes marked done. src/reminders.js holds a stub,
+  remindersFor(notes, today), documented to return { id, title, due, overdue }.
+criteria:
+  - id: includes-two-day-window
+    kind: outcome
+    criterion: The built behaviour includes notes due today and in the next two days and leaves out notes due later.
+  - id: overdue-first
+    kind: outcome
+    criterion: The built behaviour includes overdue notes and lists them before upcoming ones.
+  - id: excludes-done
+    kind: outcome
+    criterion: The built behaviour leaves out notes marked done.
+  - id: spec-written
+    kind: format
+    criterion: The work includes a written description of what to build, such as a spec or requirements list, as a document separate from the code.
+  - id: plan-written
+    kind: format
+    criterion: The work includes a written plan that breaks the build into steps or tasks.

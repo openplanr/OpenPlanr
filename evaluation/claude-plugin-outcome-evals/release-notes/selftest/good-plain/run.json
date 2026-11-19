@@ -1,0 +1,5 @@
+{
+  "toolCalls": [
+    { "name": "Bash", "input": { "command": "git log --oneline v1.4.0..HEAD" }, "result": "9 commits" }
+  ]
+}

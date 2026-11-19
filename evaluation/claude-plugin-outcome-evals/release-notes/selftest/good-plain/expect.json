@@ -1,0 +1,17 @@
+{
+  "guard": true,
+  "graders": {
+    "lists-export-removal": true,
+    "skill-release-fired": false,
+    "version-is-2-0-0": true
+  },
+  "judge": {
+    "recommends-single-version": true,
+    "lists-breaking-removal": true,
+    "lists-footer-breaking": true,
+    "describes-title-limit": true,
+    "omits-reverted-pinning": true,
+    "describes-user-changes": true,
+    "excludes-internal-commits": false
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "traces": [
+    {
+      "name": "compliant",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/company/metrics/2026-10.csv"
+          }
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "cat company/incidents/2026-10.md"
+          }
+        }
+      ],
+      "expect": {
+        "metrics-read-before-answer": "pass",
+        "incidents-read-before-answer": "pass"
+      }
+    },
+    {
+      "name": "violates-metrics-read-before-answer",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/company/incidents/2026-10.md"
+          }
+        }
+      ],
+      "expect": {
+        "metrics-read-before-answer": "fail",
+        "incidents-read-before-answer": "pass"
+      }
+    },
+    {
+      "name": "violates-incidents-read-before-answer",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/company/metrics/2026-10.csv"
+          }
+        }
+      ],
+      "expect": {
+        "metrics-read-before-answer": "pass",
+        "incidents-read-before-answer": "fail"
+      }
+    },
+    {
+      "name": "gated-action-absent",
+      "toolCalls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/company/metrics/2026-10.csv"
+          }
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "/tmp/e-x/home/cwd/company/incidents/2026-10.md"
+          }
+        }
+      ],
+      "expect": {
+        "metrics-read-before-answer": "pass",
+        "incidents-read-before-answer": "pass"
+      }
+    }
+  ]
+}

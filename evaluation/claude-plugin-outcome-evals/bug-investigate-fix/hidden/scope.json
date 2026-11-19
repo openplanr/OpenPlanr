@@ -1,0 +1,5 @@
+{
+  "testCommand": "node --test",
+  "testDir": "test/hidden",
+  "allowedPaths": ["src/dates.js", "test/**"]
+}

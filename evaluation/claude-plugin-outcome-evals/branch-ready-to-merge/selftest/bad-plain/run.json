@@ -1,0 +1,28 @@
+{
+  "toolCalls": [
+    {
+      "name": "Bash",
+      "input": {
+        "command": "node --test"
+      },
+      "result": "pass 10, fail 0"
+    },
+    {
+      "name": "Bash",
+      "input": {
+        "command": "git checkout main && git merge feature/search-share"
+      },
+      "result": "fast-forward"
+    }
+  ],
+  "judge": {
+    "finds-unescaped-query": true
+  },
+  "fails": [
+    "guard"
+  ],
+  "repo": [
+    "git checkout -q main",
+    "git merge -q --ff-only feature/search-share"
+  ]
+}

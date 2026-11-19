@@ -1,0 +1,10 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:land" } },
+    { "name": "Bash", "input": { "command": "git log --format=\"%h %s\" origin/main..HEAD" }, "result": "2 commits" },
+    { "name": "Bash", "input": { "command": "git diff origin/main...HEAD -- \"src/search.js\" \"test/search.test.js\"" }, "result": "diff" },
+    { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 10, fail 0" },
+    { "name": "Bash", "input": { "command": "gh pr view --json number,state,statusCheckRollup,reviewDecision" }, "result": "{}" },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/reviews/feature-search-share-land.md", "content": "..." } }
+  ]
+}

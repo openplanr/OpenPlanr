@@ -1,0 +1,5 @@
+{
+  "testCommand": "node --test",
+  "testDir": "test/hidden",
+  "allowedPaths": ["src/notes.js", "src/server.js", "src/tags.js", "test/**", "README.md", "docs/changes/0004-note-tags.md"]
+}

@@ -1,0 +1,7 @@
+{
+  "toolCalls": [
+    { "name": "Bash", "input": { "command": "git log --format=\"%h %s%n%b\" main..HEAD" }, "result": "4 commits" },
+    { "name": "Bash", "input": { "command": "git diff main...HEAD" }, "result": "diff" },
+    { "name": "Bash", "input": { "command": "node --test" }, "result": "pass 12, fail 0" }
+  ]
+}

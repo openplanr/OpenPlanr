@@ -1,0 +1,21 @@
+{
+  "guard": false,
+  "graders": {
+    "names-missing-revocation": true,
+    "skill-plan-review-fired": false
+  },
+  "judge": {
+    "finds-uncovered-revocation": true,
+    "finds-missing-migration": true,
+    "finds-missing-ownership-check": true,
+    "finds-oversized-task": true,
+    "finds-wrong-expiry": true,
+    "finds-header-required": true,
+    "finds-response-overexposes": true,
+    "finds-guessable-token": true,
+    "error-helpers-task-not-blocked": true,
+    "docs-task-not-blocked": true,
+    "no-cleanup-job-not-blocked": true,
+    "live-content-not-blocked": true
+  }
+}
