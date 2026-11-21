@@ -99,15 +99,22 @@ function flowScalar(token) {
     });
 }
 
-function parseInlineArray(raw) {
+function parseMapList(raw) {
   let offset = 1;
   function spaces() {
-    while (offset < raw.length && /\s/u.test(raw[offset])) offset++;
+    while (offset < raw.length) {
+      if (/\s/u.test(raw[offset])) offset++;
+      else if (raw[offset] === '#') {
+        const end = raw.indexOf('\n', offset);
+        offset = end < 0 ? raw.length : end + 1;
+      } else break;
+    }
   }
   function consume(char) {
     spaces();
     if (raw[offset] !== char) return false;
     offset++;
+    spaces();
     return true;
   }
   function scalar(key = false) {
@@ -146,7 +153,7 @@ function parseInlineArray(raw) {
         if (!consume(':')) throw new SyntaxError('Expected a colon after frontmatter map key');
         if (entries.has(key)) throw new SyntaxError('Duplicate frontmatter map key');
         entries.set(key, scalar());
-      } while (consume(',') && raw.slice(offset).trimStart()[0] !== '}');
+      } while (consume(',') && raw[offset] !== '}');
       if (!consume('}')) throw new SyntaxError('Expected a closing frontmatter map brace');
     }
     return Object.fromEntries(entries);
@@ -155,7 +162,7 @@ function parseInlineArray(raw) {
   if (!consume(']')) {
     do {
       values.push(item());
-    } while (consume(',') && raw.slice(offset).trimStart()[0] !== ']');
+    } while (consume(',') && raw[offset] !== ']');
     if (!consume(']')) throw new SyntaxError('Expected a closing frontmatter list bracket');
   }
   const remainder = raw.slice(offset).trim();
@@ -245,6 +252,12 @@ export function parseFrontmatter(raw) {
     }
 
     if (value[0] === '[') {
+      if (!FLAT_MAP_ARRAY_KEYS.has(key)) {
+        // Custom metadata keeps the native reader's existing scalar-list semantics.
+        const inner = value.slice(1, -1).trim();
+        out[key] = inner === '' ? [] : inner.split(',').map(coerceScalar);
+        continue;
+      }
       const continuation = [];
       while (
         !/\]\s*(?:#.*)?$/u.test(continuation.at(-1) ?? value) &&
@@ -253,7 +266,7 @@ export function parseFrontmatter(raw) {
       ) {
         continuation.push(lines[++i].trim());
       }
-      out[key] = parseInlineArray([value, ...continuation].join(' '));
+      out[key] = parseMapList([value, ...continuation].join('\n'));
       continue;
     }
 

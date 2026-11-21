@@ -75,7 +75,7 @@ test('delegated summaries match native task details for inline and block preserv
     `[{repositoryKey: project, path: 'src/it''s, fine.ts'}]`,
     String.raw`[{"repositoryKey": "project", "path": "src/a,\"b\".ts"}]`,
     String.raw`[{repositoryKey: project, path: "src/a\x2cb.ts",}]`,
-    "[\n  {repositoryKey: project, path: 'src/it''s.ts'},\n]",
+    "[\n  {repositoryKey: project, path: 'src/it''s.ts'}, # closing delimiter follows\n]",
     "\n  - repositoryKey: project\n    path: 'src/it''s, fine.ts'",
     '\n  - repositoryKey: project\n    path: "src/a, b.ts"',
   ]) {
@@ -86,4 +86,17 @@ test('delegated summaries match native task details for inline and block preserv
     assert.equal(body, original.split('---\n').at(-1));
     assert.deepEqual(summary, delegated);
   }
+});
+
+test('custom nested metadata does not prevent reading a neighboring task', (t) => {
+  const project = mkdtempSync(join(tmpdir(), 'planning-custom-list-'));
+  t.after(() => rmSync(project, { recursive: true, force: true }));
+  cpSync(fixtureRoot, project, { recursive: true });
+  const dir = join(project, '.planr');
+  const task = join(dir, 'specs/SPEC-001-checkout/tasks/T-001-payment-service.md');
+  writeFileSync(
+    task,
+    readFileSync(task, 'utf8').replace('title:', 'customHints: [[a, b], c]\ntitle:'),
+  );
+  assert.equal(getNode(dir, 'SPEC-001/T-002').title, 'Order confirmation');
 });
