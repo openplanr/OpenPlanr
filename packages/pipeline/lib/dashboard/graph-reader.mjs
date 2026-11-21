@@ -66,9 +66,64 @@ function coerceScalar(raw) {
 }
 
 function parseInlineArray(raw) {
-  const inner = raw.trim().slice(1, -1).trim();
-  if (inner === '') return [];
-  return inner.split(',').map((part) => coerceScalar(part));
+  let offset = 1;
+  function spaces() {
+    while (offset < raw.length && /\s/u.test(raw[offset])) offset++;
+  }
+  function consume(char) {
+    spaces();
+    if (raw[offset] !== char) return false;
+    offset++;
+    return true;
+  }
+  function scalar(key = false) {
+    spaces();
+    const start = offset;
+    const quote = raw[offset];
+    if (quote === '"' || quote === "'") {
+      offset++;
+      while (offset < raw.length) {
+        const char = raw[offset++];
+        if (char === '\\' && quote === '"') offset++;
+        else if (char === quote) {
+          if (quote === "'" && raw[offset] === "'") {
+            offset++;
+            continue;
+          }
+          const token = raw.slice(start, offset);
+          return quote === '"' ? JSON.parse(token) : token.slice(1, -1).replaceAll("''", "'");
+        }
+      }
+      throw new SyntaxError('Unterminated quoted frontmatter value');
+    }
+    while (offset < raw.length && !',}]'.includes(raw[offset]) && !(key && raw[offset] === ':')) {
+      offset++;
+    }
+    const token = raw.slice(start, offset).trim();
+    if (!token) throw new SyntaxError('Expected a frontmatter value');
+    return key ? token : coerceScalar(token);
+  }
+  function item() {
+    if (!consume('{')) return scalar();
+    const entries = [];
+    if (!consume('}')) {
+      do {
+        const key = scalar(true);
+        if (!consume(':')) throw new SyntaxError('Expected a colon after frontmatter map key');
+        entries.push([key, scalar()]);
+      } while (consume(','));
+      if (!consume('}')) throw new SyntaxError('Expected a closing frontmatter map brace');
+    }
+    return Object.fromEntries(entries);
+  }
+  const values = [];
+  if (!consume(']')) {
+    do {
+      values.push(item());
+    } while (consume(',') && raw.slice(offset).trimStart()[0] !== ']');
+    if (!consume(']')) throw new SyntaxError('Expected a closing frontmatter list bracket');
+  }
+  return values;
 }
 
 /**

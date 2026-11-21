@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { getNode } from '../../lib/dashboard/graph-engine.mjs';
 import { readGraph } from '../../lib/dashboard/graph-reader.mjs';
 import { validateJson } from '../../lib/protocol/json-schema.mjs';
 
@@ -27,13 +29,13 @@ function normalize(graph) {
   };
 }
 
-function runOpenPlanrGraph() {
+function runOpenPlanrGraph(project = fixtureRoot) {
   const cli = join(openPlanrRoot, 'src/cli/index.ts');
   const openPlanrRequire = createRequire(join(openPlanrRoot, 'package.json'));
   const tsx = openPlanrRequire.resolve('tsx/cli');
   if (!existsSync(cli) || !existsSync(tsx)) return null;
 
-  const result = spawnSync(tsx, [cli, '--project-dir', fixtureRoot, 'graph', '--json'], {
+  const result = spawnSync(tsx, [cli, '--project-dir', project, 'graph', '--json'], {
     cwd: openPlanrRoot,
     encoding: 'utf-8',
     env: { ...process.env, NO_COLOR: '1' },
@@ -59,4 +61,26 @@ test('OpenPlanr CLI graph output matches the pipeline native graph fixture from 
   const native = readGraph(planrDir);
   assert.deepEqual(validateJson(cliGraph, graphSchema), []);
   assert.deepEqual(normalize(cliGraph), normalize(native));
+});
+
+test('delegated summaries match native task details for inline and block preserve entries', (t) => {
+  const project = mkdtempSync(join(tmpdir(), 'planning-preserve-'));
+  t.after(() => rmSync(project, { recursive: true, force: true }));
+  cpSync(fixtureRoot, project, { recursive: true });
+  const dir = join(project, '.planr');
+  const task = join(dir, 'specs/SPEC-001-checkout/tasks/T-001-payment-service.md');
+  const original = readFileSync(task, 'utf8');
+  for (const preserve of [
+    String.raw`[{"repositoryKey":"project","path":"src/a, b.ts"}]`,
+    `[{repositoryKey: project, path: 'src/it''s, fine.ts'}]`,
+    String.raw`[{"repositoryKey": "project", "path": "src/a,\"b\".ts"}]`,
+    '\n  - repositoryKey: project\n    path: "src/a, b.ts"',
+  ]) {
+    writeFileSync(task, original.replace('title:', `preserve: ${preserve}\ntitle:`));
+    const id = 'SPEC-001/T-001';
+    const delegated = runOpenPlanrGraph(project).nodes.find((node) => node.id === id);
+    const { body, ...summary } = getNode(dir, id);
+    assert.equal(body, original.split('---\n').at(-1));
+    assert.deepEqual(summary, delegated);
+  }
 });

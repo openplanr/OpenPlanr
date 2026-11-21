@@ -6,6 +6,7 @@ import {
   type PcIconName,
   Toast,
 } from '../../design-system/components/index.js';
+import { readFailure } from '../../lib/api/read-failure.js';
 import { usePlanningCopy } from '../../lib/routing/planning-presentation.js';
 import { fetchPlanningFileLink } from './planning-api.js';
 import type { PlanningModelNode } from './planning-model.js';
@@ -146,12 +147,12 @@ export function DeclaredFile({
       });
       if (!request.signal.aborted && currentKey.current === key)
         setResult({ key, url: link.editorUrl, reason: link.reason });
-    } catch {
+    } catch (error) {
       if (!request.signal.aborted && currentKey.current === key)
         setResult({
           key,
           url: null,
-          reason: 'The editor link could not be verified. Retry or copy the path manually.',
+          reason: readFailure(error, 'The editor link').reason,
         });
     } finally {
       if (!request.signal.aborted && currentKey.current === key) {

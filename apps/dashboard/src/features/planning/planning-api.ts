@@ -19,6 +19,7 @@ import {
   type PlanningFileLinkEnvelope,
   validPlanningFilePath,
 } from '@openplanr/protocol/dashboard/planning-file-link-contracts.mjs';
+import { httpReadFailure } from '../../lib/api/read-failure.js';
 import { DashboardValidationError } from '../../lib/api/validation.js';
 import type {
   DashboardEventHead,
@@ -1126,7 +1127,8 @@ function planningUrl(origin: string, path: string, identity: DashboardQueryIdent
 }
 
 async function readResponse(response: Response, contentType: string): Promise<string> {
-  if (!response.ok || !response.headers.get('content-type')?.startsWith(contentType)) {
+  if (!response.ok) throw httpReadFailure(response.status, await response.text());
+  if (!response.headers.get('content-type')?.startsWith(contentType)) {
     return invalid('$', 'Planning response is unavailable');
   }
   const text = await response.text();

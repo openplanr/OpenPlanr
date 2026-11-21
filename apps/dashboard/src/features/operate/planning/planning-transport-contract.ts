@@ -1,3 +1,4 @@
+import { httpReadFailure } from '../../../lib/api/read-failure.js';
 import type {
   DashboardEventHead,
   DashboardQueryIdentity,
@@ -304,6 +305,7 @@ export async function get(
   identity: DashboardQueryIdentity,
   signal: AbortSignal,
   guard?: PlanningTransportGuard,
+  traceRead = false,
 ): Promise<JsonRecord> {
   const pendingResponse = fetcher(commandUrl(origin, path, identity), {
     headers: {
@@ -319,6 +321,7 @@ export async function get(
   const text = guard ? await guard.waitForCurrent(pendingText) : await pendingText;
   guard?.assertCurrent();
   if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) fail();
+  if (!response.ok && traceRead) throw httpReadFailure(response.status, text, true);
   let payload: unknown;
   try {
     payload = JSON.parse(text);

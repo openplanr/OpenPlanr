@@ -1,5 +1,6 @@
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { useEffect, useMemo, useState } from 'react';
+import { readFailure } from '../../lib/api/read-failure.js';
 import { createDashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { isCanonicalPlanningId } from '../../lib/routing/planning-view-codec.js';
 import { fetchPlanningDetail, type PlanningDetailEnvelope } from './planning-api.js';
@@ -47,7 +48,11 @@ export function usePlanningDetail(
   const revision = useMemo(() => JSON.stringify(model.envelope.cursor), [model.envelope.cursor]);
   const key = `${source}:${revision}`;
   const [accepted, setAccepted] = useState<AcceptedDetail | null>(() => cache.get(key) ?? null);
-  const [failure, setFailure] = useState<{ key: string; reason: string } | null>(null);
+  const [failure, setFailure] = useState<{
+    key: string;
+    reason: string;
+    retryable: boolean;
+  } | null>(null);
   const [attempt, retry] = useState(0);
   useEffect(() => {
     if (!identity || !summary) return;
@@ -75,12 +80,11 @@ export function usePlanningDetail(
         setAccepted(entry);
         setFailure(null);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (active)
           setFailure({
             key,
-            reason:
-              'The artifact detail could not be verified. Retry the read or reconnect to the dashboard.',
+            ...readFailure(error, 'The artifact detail'),
           });
       });
     return () => {
@@ -95,6 +99,7 @@ export function usePlanningDetail(
     identity,
     loading: Boolean(summary && visible?.revision !== revision && failure?.key !== key),
     error: failure?.key === key ? failure.reason : null,
-    retry: () => retry((value) => value + 1),
+    retry:
+      failure?.key === key && !failure.retryable ? undefined : () => retry((value) => value + 1),
   };
 }

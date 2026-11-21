@@ -597,6 +597,39 @@ describe('shared Planning artifact detail', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it('offers refresh for a refused detail and retry for a temporary failure', async () => {
+    for (const retryable of [false, true]) {
+      const model = fixture();
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              error: {
+                code: retryable ? 'DASHBOARD_READ_FAILED' : 'DASHBOARD_RESPONSE_INVALID',
+                retryable,
+                context: {},
+              },
+            }),
+            { status: retryable ? 503 : 409, headers: { 'content-type': 'application/json' } },
+          ),
+        )
+        .mockResolvedValueOnce(response(detailEnvelope(model)));
+      vi.stubGlobal('fetch', fetcher);
+      const view = render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
+      await screen.findByText(retryable ? /DASHBOARD_READ_FAILED/ : /Refresh the dashboard/);
+      const button = screen.queryByRole('button', { name: 'Try again' });
+      if (retryable) {
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        await findDetailReady(document.body);
+        expect(fetcher).toHaveBeenCalledTimes(2);
+      } else {
+        expect(button).toBeNull();
+      }
+      view.unmount();
+    }
+  });
+
   it('surfaces blocked copy with the exact path and a manual fallback', async () => {
     const model = fixture();
     vi.stubGlobal(
