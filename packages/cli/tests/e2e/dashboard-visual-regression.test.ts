@@ -66,6 +66,9 @@ import {
 } from './fixtures/dashboard-route-catalog.js';
 import { SPRINT_SCENARIO_NOW } from './fixtures/dashboard-sprint-graph.js';
 
+import { registerVerifiedDetailTest } from './fixtures/dashboard-verified-detail.js';
+
+registerVerifiedDetailTest();
 registerDashboardPerformanceTraceTests();
 registerGraphCanvasBrowserTests((page, route, options) => openFixture(page, route, options));
 registerFocusClearanceBrowserTests((page, route, options) => openFixture(page, route, options));

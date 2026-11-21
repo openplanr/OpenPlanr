@@ -5,6 +5,12 @@ const originReasons = new Map([
   ['OPERATE_COMMAND_INVALID', 'The origin request is invalid.'],
   ['OPERATE_ORIGIN_INVALID', 'The local server refused the request origin.'],
   ['OPERATE_BINDING_REQUIRED', 'Reconnect to the project to verify the binding.'],
+  [
+    'E_OPERATE_PLANNING_ACCESS',
+    'The current project does not have access to this operating origin.',
+  ],
+  ['E_OPERATE_ORIGIN_INVALID', 'The operating origin record is missing or invalid.'],
+  ['CAPABILITY_DENIED', 'Access to this operating trace was denied.'],
   ['OPERATE_READ_ONLY', 'The operating trace gateway is unavailable.'],
 ]);
 
@@ -55,6 +61,15 @@ export function readFailure(error: unknown, subject: string) {
     return {
       reason: `${subject} could not be verified. ${error.message}`,
       retryable: error.retryable,
+    };
+  }
+  if (
+    error instanceof DashboardValidationError ||
+    (error instanceof Error && error.name === 'OPERATE_RESPONSE_INVALID')
+  ) {
+    return {
+      reason: `${subject} could not be verified. The response failed validation. Refresh the dashboard or request a fresh read.`,
+      retryable: true,
     };
   }
   const reason =

@@ -74,6 +74,9 @@ test('delegated summaries match native task details for inline and block preserv
     String.raw`[{"repositoryKey":"project","path":"src/a, b.ts"}]`,
     `[{repositoryKey: project, path: 'src/it''s, fine.ts'}]`,
     String.raw`[{"repositoryKey": "project", "path": "src/a,\"b\".ts"}]`,
+    String.raw`[{repositoryKey: project, path: "src/a\x2cb.ts",}]`,
+    "[\n  {repositoryKey: project, path: 'src/it''s.ts'},\n]",
+    "\n  - repositoryKey: project\n    path: 'src/it''s, fine.ts'",
     '\n  - repositoryKey: project\n    path: "src/a, b.ts"',
   ]) {
     writeFileSync(task, original.replace('title:', `preserve: ${preserve}\ntitle:`));

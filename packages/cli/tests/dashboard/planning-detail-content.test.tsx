@@ -796,6 +796,32 @@ describe('shared Planning artifact detail', () => {
     expect(url.searchParams.get('sourceViewHash')).toBe(model.envelope.cursor.viewHash);
   });
 
+  it('displays the safe editor refusal and keeps server details private', async () => {
+    const model = fixture();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).includes('/file-link/')
+          ? new Response(
+              JSON.stringify({
+                error: { code: 'CAPABILITY_DENIED', retryable: false, context: {} },
+              }),
+              { status: 403 },
+            )
+          : response(detailEnvelope(model)),
+      ),
+    );
+    render(<PlanningArtifactDetail model={model} nodeId={nodeId} origin={origin} />);
+    await findDetailReady(document.body);
+    fireEvent.click(
+      within(screen.getByLabelText('Declared files')).getByRole('button', {
+        name: 'Open in editor',
+      }),
+    );
+    await screen.findByText(/CAPABILITY_DENIED, HTTP 403/);
+    expect(screen.queryByRole('link', { name: 'Launch editor' })).toBeNull();
+  });
+
   it('refuses a hostile editor URI and leaves a copy fallback visible', async () => {
     const model = fixture();
     vi.stubGlobal(

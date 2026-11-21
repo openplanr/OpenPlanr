@@ -65,6 +65,40 @@ function coerceScalar(raw) {
   return inner;
 }
 
+const YAML_ESCAPES = new Map(
+  Object.entries({
+    0: '\0',
+    a: '\x07',
+    b: '\b',
+    t: '\t',
+    n: '\n',
+    v: '\v',
+    f: '\f',
+    r: '\r',
+    e: '\x1b',
+    ' ': ' ',
+    '"': '"',
+    '/': '/',
+    '\\': '\\',
+    N: '\x85',
+    _: '\xa0',
+    L: '\u2028',
+    P: '\u2029',
+  }),
+);
+
+function flowScalar(token) {
+  if (token.startsWith("'") && token.endsWith("'")) return token.slice(1, -1).replaceAll("''", "'");
+  if (!token.startsWith('"') || !token.endsWith('"')) return coerceScalar(token);
+  return token
+    .slice(1, -1)
+    .replace(/\\(x[\da-fA-F]{2}|u[\da-fA-F]{4}|U[\da-fA-F]{8}|.)/gu, (_, sequence) => {
+      if (YAML_ESCAPES.has(sequence)) return YAML_ESCAPES.get(sequence);
+      if (sequence.length > 1) return String.fromCodePoint(Number.parseInt(sequence.slice(1), 16));
+      throw new SyntaxError('Unsupported escape in a double-quoted frontmatter value');
+    });
+}
+
 function parseInlineArray(raw) {
   let offset = 1;
   function spaces() {
@@ -91,7 +125,7 @@ function parseInlineArray(raw) {
             continue;
           }
           const token = raw.slice(start, offset);
-          return quote === '"' ? JSON.parse(token) : token.slice(1, -1).replaceAll("''", "'");
+          return flowScalar(token);
         }
       }
       throw new SyntaxError('Unterminated quoted frontmatter value');
@@ -105,13 +139,14 @@ function parseInlineArray(raw) {
   }
   function item() {
     if (!consume('{')) return scalar();
-    const entries = [];
+    const entries = new Map();
     if (!consume('}')) {
       do {
         const key = scalar(true);
         if (!consume(':')) throw new SyntaxError('Expected a colon after frontmatter map key');
-        entries.push([key, scalar()]);
-      } while (consume(','));
+        if (entries.has(key)) throw new SyntaxError('Duplicate frontmatter map key');
+        entries.set(key, scalar());
+      } while (consume(',') && raw.slice(offset).trimStart()[0] !== '}');
       if (!consume('}')) throw new SyntaxError('Expected a closing frontmatter map brace');
     }
     return Object.fromEntries(entries);
@@ -123,6 +158,9 @@ function parseInlineArray(raw) {
     } while (consume(',') && raw.slice(offset).trimStart()[0] !== ']');
     if (!consume(']')) throw new SyntaxError('Expected a closing frontmatter list bracket');
   }
+  const remainder = raw.slice(offset).trim();
+  if (remainder && !remainder.startsWith('#'))
+    throw new SyntaxError('Unexpected text after frontmatter list');
   return values;
 }
 
@@ -181,7 +219,7 @@ export function parseFrontmatter(raw) {
         }
         const item = {};
         const firstKey = rawItem.slice(0, itemColon).trim();
-        item[firstKey] = coerceScalar(rawItem.slice(itemColon + 1));
+        item[firstKey] = flowScalar(rawItem.slice(itemColon + 1).trim());
         j++;
         while (
           j < lines.length &&
@@ -190,7 +228,9 @@ export function parseFrontmatter(raw) {
         ) {
           const nested = lines[j].trim();
           const nestedColon = nested.indexOf(':');
-          item[nested.slice(0, nestedColon).trim()] = coerceScalar(nested.slice(nestedColon + 1));
+          item[nested.slice(0, nestedColon).trim()] = flowScalar(
+            nested.slice(nestedColon + 1).trim(),
+          );
           j++;
         }
         items.push(item);
@@ -205,7 +245,15 @@ export function parseFrontmatter(raw) {
     }
 
     if (value[0] === '[') {
-      out[key] = parseInlineArray(value);
+      const continuation = [];
+      while (
+        !/\]\s*(?:#.*)?$/u.test(continuation.at(-1) ?? value) &&
+        i + 1 < lines.length &&
+        /^(?:\s|\]|$)/u.test(lines[i + 1])
+      ) {
+        continuation.push(lines[++i].trim());
+      }
+      out[key] = parseInlineArray([value, ...continuation].join(' '));
       continue;
     }
 
