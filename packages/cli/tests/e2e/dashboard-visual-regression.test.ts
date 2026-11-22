@@ -1622,15 +1622,17 @@ test.describe('dashboard real-browser quality', () => {
     expect(writes).toEqual([]);
   });
 
-  test('matches the Board to its canvas parity rows in both themes', async ({ page }, testInfo) => {
-    const results: unknown[] = [];
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    const viewports = {
-      D: { width: 1440, height: 900 },
-      T: { width: 768, height: 1024 },
-      M: { width: 390, height: 844 },
-    } as const;
-    for (const theme of ['dark', 'light'] as const) {
+  for (const theme of ['dark', 'light'] as const) {
+    test(`matches the Board to its canvas parity rows in ${theme} theme`, async ({
+      page,
+    }, testInfo) => {
+      const results: unknown[] = [];
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const viewports = {
+        D: { width: 1440, height: 900 },
+        T: { width: 768, height: 1024 },
+        M: { width: 390, height: 844 },
+      } as const;
       for (const viewport of ['D', 'M'] as const) {
         await page.setViewportSize(viewports[viewport]);
         for (const setup of [null, 'select', 'lanes'] as const) {
@@ -1704,11 +1706,11 @@ test.describe('dashboard real-browser quality', () => {
           });
         }
       }
-    }
-    const parity = testInfo.outputPath('board-parity.json');
-    writeFileSync(parity, JSON.stringify(results, null, 2));
-    await testInfo.attach('board-parity.json', { path: parity, contentType: 'application/json' });
-  });
+      const parity = testInfo.outputPath('board-parity.json');
+      writeFileSync(parity, JSON.stringify(results, null, 2));
+      await testInfo.attach('board-parity.json', { path: parity, contentType: 'application/json' });
+    });
+  }
 
   test('matches Home to its canvas parity rows in both themes', async ({ page }, testInfo) => {
     const results: unknown[] = [];
@@ -1773,15 +1775,20 @@ test.describe('dashboard real-browser quality', () => {
     await testInfo.attach('home-parity.json', { path: parity, contentType: 'application/json' });
   });
 
-  test('matches the List to its canvas parity rows in both themes', async ({ page }, testInfo) => {
-    const results: unknown[] = [];
-    const emptyView =
-      '#/list?v=eyJzY2hlbWFWZXJzaW9uIjoiMS4wLjAiLCJyb3V0ZSI6Imxpc3QiLCJmaWx0ZXJzIjp7InR5cGUiOltdLCJzdGF0dXMiOlsiYmxvY2tlZCJdLCJwcmlvcml0eSI6W10sImxhYmVsIjpbInNlY3VyaXR5Il0sInF1ZXJ5IjoiZW50cmEiLCJjcmVhdGVkV2l0aGluRGF5cyI6bnVsbCwidXBkYXRlZFdpdGhpbkRheXMiOm51bGx9LCJncm91cEJ5Ijoic3BlYyIsInNvcnQiOnsiZmllbGQiOiJ1cGRhdGVkIiwiZGlyZWN0aW9uIjoiZGVzYyJ9LCJkZW5zaXR5IjoiY29tZm9ydGFibGUiLCJmb2N1c0lkIjpudWxsfQ';
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width: 1440 - PARITY_RAIL_WIDTH, height: 900 });
-    const list = page.locator('[data-route-kind="planning.list"]');
-    for (const theme of ['dark', 'light'] as const) {
+  for (const theme of ['dark', 'light'] as const) {
+    test(`matches the List to its canvas parity rows in ${theme} theme`, async ({
+      page,
+    }, testInfo) => {
+      const results: unknown[] = [];
+      const emptyView =
+        '#/list?v=eyJzY2hlbWFWZXJzaW9uIjoiMS4wLjAiLCJyb3V0ZSI6Imxpc3QiLCJmaWx0ZXJzIjp7InR5cGUiOltdLCJzdGF0dXMiOlsiYmxvY2tlZCJdLCJwcmlvcml0eSI6W10sImxhYmVsIjpbInNlY3VyaXR5Il0sInF1ZXJ5IjoiZW50cmEiLCJjcmVhdGVkV2l0aGluRGF5cyI6bnVsbCwidXBkYXRlZFdpdGhpbkRheXMiOm51bGx9LCJncm91cEJ5Ijoic3BlYyIsInNvcnQiOnsiZmllbGQiOiJ1cGRhdGVkIiwiZGlyZWN0aW9uIjoiZGVzYyJ9LCJkZW5zaXR5IjoiY29tZm9ydGFibGUiLCJmb2N1c0lkIjpudWxsfQ';
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize({
+        width: theme === 'dark' ? 1440 - PARITY_RAIL_WIDTH : 1440,
+        height: 900,
+      });
+      const list = page.locator('[data-route-kind="planning.list"]');
       const open = async (hash: string, dataset = 'representative') => {
         await page.goto(fixtureUrl(hash, { dataset, theme }));
         await page.evaluate(() => document.fonts.ready);
@@ -1866,12 +1873,11 @@ test.describe('dashboard real-browser quality', () => {
       await page.keyboard.press('Escape');
       await open('#/list', 'artboard');
       await page.screenshot({ path: testInfo.outputPath(`list-M-${theme}.png`) });
-      await page.setViewportSize({ width: 1440, height: 900 });
-    }
-    const parity = testInfo.outputPath('list-parity.json');
-    writeFileSync(parity, JSON.stringify(results, null, 2));
-    await testInfo.attach('list-parity.json', { path: parity, contentType: 'application/json' });
-  });
+      const parity = testInfo.outputPath('list-parity.json');
+      writeFileSync(parity, JSON.stringify(results, null, 2));
+      await testInfo.attach('list-parity.json', { path: parity, contentType: 'application/json' });
+    });
+  }
 
   test('matches Detail to its canvas parity rows in both themes', async ({ page }, testInfo) => {
     const results: unknown[] = [];
