@@ -451,6 +451,14 @@ export function registerFocusClearanceBrowserTests(openFixture: OpenFixture) {
 
         await openFixture(page, '#/list');
         await openSidebar(page);
+        // Unpinning widens the List, which takes its desktop layout a frame or two later.
+        await expect(page.locator('.pc-list')).toHaveAttribute('data-list-layout', 'desktop');
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+            ),
+        );
         await injectScroller(page);
         await page.evaluate(() => window.__dashboardLayoutShifts.markPhase('focus-clearance'));
         await walkScroller(page);

@@ -1,4 +1,5 @@
 import type {
+  Camera,
   CanvasController,
   CanvasEdge,
   CanvasLevel,
@@ -251,6 +252,16 @@ const PHONE_PREVIEW: CSSProperties = {
   width: 'auto',
 };
 
+type GraphFit = Readonly<{
+  target: 'all' | readonly string[];
+  camera: Camera;
+  width: number;
+  height: number;
+}>;
+
+const sameCamera = (left: Camera, right: Camera) =>
+  left.x === right.x && left.y === right.y && left.zoom === right.zoom;
+
 export type GraphCanvasProps = Readonly<{
   nodes: readonly GraphNode[];
   edges: readonly GraphEdge[];
@@ -334,6 +345,57 @@ export function GraphCanvas({
     const next = selected && layout.position.has(selected) ? [selected] : [];
     if (current.length !== next.length || current[0] !== next[0]) controller.setSelection(next);
   }, [controller, selected, layout]);
+  const lastFit = useRef<GraphFit | null>(null);
+  // An animated fit reports its camera frame by frame; the fit owns them until motion stops.
+  const fitMoving = useRef(false);
+  const fitMotion = useRef(false);
+  const fitCheck = useRef<number | null>(null);
+  const fitGraph = useCallback((current: CanvasController, target: GraphFit['target']) => {
+    const before = current.getCamera();
+    current.fit(target, { maxZoom: 1 });
+    const camera = current.getCamera();
+    const box = stage.current?.getBoundingClientRect();
+    fitMoving.current = sameCamera(before, camera);
+    lastFit.current = { target, camera, width: box?.width ?? 0, height: box?.height ?? 0 };
+    if (fitCheck.current !== null) cancelAnimationFrame(fitCheck.current);
+    fitCheck.current = null;
+    if (!fitMoving.current) return;
+    // A fit that is already in place starts no motion. fit() requests the engine's frame
+    // first, so an animated fit has reported motion before this frame runs.
+    fitMotion.current = false;
+    fitCheck.current = requestAnimationFrame(() => {
+      fitCheck.current = null;
+      if (!fitMotion.current) fitMoving.current = false;
+    });
+  }, []);
+  // A fit made in a smaller window is redone when it grows, until the camera moves away from it.
+  useEffect(() => {
+    if (!controller) return;
+    const cameraOff = controller.on('camera', (camera) => {
+      if (fitMoving.current && lastFit.current) lastFit.current = { ...lastFit.current, camera };
+    });
+    const motionOff = controller.on('motion', (moving) => {
+      if (moving) fitMotion.current = true;
+      else fitMoving.current = false;
+    });
+    const safeAreaOff = controller.on('safe-area', () => {
+      const fit = lastFit.current;
+      const box = stage.current?.getBoundingClientRect();
+      if (!fit || !box || (box.width <= fit.width && box.height <= fit.height)) return;
+      if (fitMoving.current || !sameCamera(controller.getCamera(), fit.camera)) return;
+      const { position } = latest.current.layout;
+      const target =
+        fit.target === 'all' || fit.target.every((id) => position.has(id)) ? fit.target : 'all';
+      fitGraph(controller, target);
+    });
+    return () => {
+      if (fitCheck.current !== null) cancelAnimationFrame(fitCheck.current);
+      fitCheck.current = null;
+      cameraOff();
+      motionOff();
+      safeAreaOff();
+    };
+  }, [controller, fitGraph]);
   // Runs after the provider's setNodes effect, so the fit measures the new scope.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only a scope change refits.
   useEffect(() => {
@@ -343,7 +405,7 @@ export function GraphCanvas({
     const fit = () => {
       const area = controller.getSafeArea();
       if (area.width <= 0 || area.height <= 0) return false;
-      controller.fit(target, { maxZoom: 1 });
+      fitGraph(controller, target);
       return true;
     };
     // A stage measured at zero size fits once it first has room.
@@ -366,12 +428,12 @@ export function GraphCanvas({
         const target = pendingFit.current;
         pendingFit.current = null;
         if (target && target.every((node) => latest.current.layout.position.has(node)))
-          controller.fit(target, { maxZoom: 1 });
+          fitGraph(controller, target);
       });
     };
     element.addEventListener('graph-focus', focus);
     return () => element.removeEventListener('graph-focus', focus);
-  }, [controller]);
+  }, [controller, fitGraph]);
   const select = useCallback((event: MouseEvent<HTMLDivElement>) => {
     const node =
       event.target instanceof Element
@@ -450,7 +512,6 @@ export function GraphCanvas({
         <GraphMinimap
           controller={controller}
           nodes={model.nodes}
-          style={colors}
           selected={selected}
           stageRoot={stage}
         />
@@ -460,7 +521,6 @@ export function GraphCanvas({
             <GraphMinimap
               controller={controller}
               nodes={model.nodes}
-              style={colors}
               selected={selected}
               stageRoot={stage}
               embedded

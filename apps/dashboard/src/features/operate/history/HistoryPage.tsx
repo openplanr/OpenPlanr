@@ -75,15 +75,15 @@ export function HistoryPage({ currentBinding, current }: HistoryPageProps) {
       data-route-kind="operate.history"
       data-audit-presentation={model.presentation}
     >
-      <ul className="pc-metrics" aria-label="History">
-        <MetricStat label="events" value={model.history.length} />
-      </ul>
       <SectionHeader
         headingLevel={1}
         eyebrow="planr-operate · history"
         title="History"
         description="See what changed, why it changed, and what happens next."
       />
+      <ul className="pc-metrics" aria-label="History">
+        <MetricStat label="events" value={model.history.length} />
+      </ul>
       <DefinitionGrid
         items={[
           { term: 'Event record', description: head, mono: true },

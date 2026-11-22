@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import {
   ActionStateBadge,
+  CommandText,
   DataTable,
   type DataTableColumn,
   DefinitionGrid,
@@ -85,6 +87,28 @@ function safeRecoveryActions(
       tool.endsWith('.rollback')
     );
   });
+}
+
+/** Why the dashboard cannot run a recovery step, and the CLI command that can. */
+function recoveryReason(entry: RecoveryAllowedAction): ReactNode {
+  // Recovery tools arrive outside the public tool union, as safeRecoveryActions also expects.
+  const tool: string = entry.tool ?? '';
+  const args: unknown = entry.arguments;
+  const generation =
+    typeof args === 'object' && args !== null && 'generation' in args ? args.generation : undefined;
+  const command =
+    tool === 'operate.recovery.clear-stale-lock'
+      ? 'openplanr operate recovery clear-stale-lock'
+      : tool === 'operate.recovery.restore' && typeof generation === 'string'
+        ? `openplanr operate recovery restore ${generation}`
+        : null;
+  return (
+    <>
+      The dashboard can&apos;t run recovery steps.{' '}
+      {command ? 'To take this one, run' : 'To see what recovery can do, run'}{' '}
+      <CommandText command={command ?? 'openplanr operate recovery inspect'} /> in your terminal.
+    </>
+  );
 }
 
 function panelState(state: keyof typeof RECOVERY_COPY): StatePanelState {
@@ -184,7 +208,7 @@ export function RecoveryPage({ currentBinding, current }: RecoveryPageProps) {
                 key={entry.tool}
                 variant={entry.tool.endsWith('.rollback') ? 'danger' : 'secondary'}
                 disabled
-                disabledReason="The dashboard has not bound a live recovery command gateway for this actor."
+                disabledReason={recoveryReason(entry)}
               >
                 {entry.label}
               </GovernedButton>

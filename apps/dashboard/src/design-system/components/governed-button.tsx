@@ -26,7 +26,7 @@ type SharedProps = Readonly<{
 type GovernedButtonProps = SharedProps &
   Readonly<{
     disabled?: boolean;
-    disabledReason?: string;
+    disabledReason?: ReactNode;
     onInvoke?: () => void | Promise<void>;
   }>;
 

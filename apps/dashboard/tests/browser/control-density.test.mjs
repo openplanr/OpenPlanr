@@ -58,6 +58,9 @@ async function fixture() {
               value={value} onChange={setValue} />
             <GovernedButton disabled={disabled} disabledReason={disabled ? 'Unavailable' : undefined}
               onInvoke={() => undefined}>Governed action</GovernedButton>
+            <GovernedButton variant="secondary" disabled={disabled}
+              disabledReason={disabled ? 'Unavailable' : undefined}
+              onInvoke={() => undefined}>Secondary governed action</GovernedButton>
             <section id="touch-recipes" style={{display:'grid',gridTemplateColumns:'minmax(0,1fr)',gap:32,padding:32,maxWidth:960}}>
               <div data-hit-group="card" style={{padding:24}}>
                 <CardHeader title="Targets" description="Card target details" href="#/list" count={2} />
@@ -173,6 +176,20 @@ test('renders compact desktop controls and keeps touch targets through state cha
             segments: heights('.pc-segmented__option'),
             segmented: heights('.pc-segmented'),
             governed: heights('.op-governed-button'),
+            secondaryBorder: (() => {
+              const probe = document.createElement('span');
+              probe.style.borderColor = 'var(--op-divider)';
+              probe.style.borderStyle = 'solid';
+              document.body.append(probe);
+              const divider = getComputedStyle(probe).borderTopColor;
+              probe.remove();
+              const button = document.querySelector(
+                '.op-governed-button[data-variant="secondary"]',
+              );
+              // The border colour transitions; read the settled value.
+              button.style.transition = 'none';
+              return { divider, button: getComputedStyle(button).borderTopColor };
+            })(),
           };
         });
         const label = `${mode.name}, disabled=${disabled}`;
@@ -195,7 +212,24 @@ test('renders compact desktop controls and keeps touch targets through state cha
           label,
         );
         assert.deepEqual(measurements.segmented, [mode.touch ? 52 : 38], label);
-        assert.deepEqual(measurements.governed, [mode.touch ? 44 : 36], label);
+        assert.deepEqual(
+          measurements.governed,
+          [mode.touch ? 44 : 36, mode.touch ? 44 : 36],
+          label,
+        );
+        // A disabled secondary action drops its strong border, so it never outweighs enabled ones.
+        if (disabled)
+          assert.equal(
+            measurements.secondaryBorder.button,
+            measurements.secondaryBorder.divider,
+            label,
+          );
+        else
+          assert.notEqual(
+            measurements.secondaryBorder.button,
+            measurements.secondaryBorder.divider,
+            label,
+          );
       }
       await page.evaluate(() => window.densityFixture.setDisabled(false));
       for (const size of ['sm', 'md']) {

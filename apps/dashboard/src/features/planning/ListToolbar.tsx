@@ -72,7 +72,7 @@ function PresetTabs({
   );
 }
 
-/** Title, count and preset tabs; below 1200px the top bar carries the title. */
+/** Title, count and preset tabs; in the tablet layout the top bar carries the count. */
 export function ListTitle({
   shown,
   total,

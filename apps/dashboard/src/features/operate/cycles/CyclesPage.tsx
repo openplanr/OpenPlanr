@@ -218,6 +218,13 @@ export function CyclesPage({ currentBinding, current }: CyclesPageProps) {
           inferred.
         </p>
       ) : null}
+      <SectionHeader
+        headingLevel={1}
+        eyebrow="planr-operate · cycles"
+        title={cycleVocabulary(surface.domainId)}
+        count={`${cycles.length} ${cycles.length === 1 ? 'cycle' : 'cycles'}`}
+        description="Follow the work from observation through learning."
+      />
       {stateOrder.length > 0 ? (
         <ul className="pc-metrics" aria-label="Cycle states">
           {stateOrder.map((state) => (
@@ -230,13 +237,6 @@ export function CyclesPage({ currentBinding, current }: CyclesPageProps) {
           ))}
         </ul>
       ) : null}
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="planr-operate · cycles"
-        title={cycleVocabulary(surface.domainId)}
-        count={`${cycles.length} ${cycles.length === 1 ? 'cycle' : 'cycles'}`}
-        description="Follow the work from observation through learning."
-      />
       {cycles.length === 0 ? (
         <StatePanel
           state="unavailable"

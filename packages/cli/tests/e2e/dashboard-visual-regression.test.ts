@@ -820,13 +820,13 @@ test.describe('dashboard real-browser quality', () => {
       await expect(toolbar.getByRole('button', { name: /^Search or run/u })).toBeVisible();
       await expect(toolbar.getByRole('button', { name: 'More tools' })).toBeVisible();
     }
-    // The menu still lists every Operate place.
-    await page
-      .locator('.canvas-chrome-root [data-chrome-slot="menu"]')
-      .getByRole('button', { name: 'Menu', exact: true })
-      .click();
+    // The navigation panel behind the view name still lists every Operate place.
+    await page.getByRole('button', { name: 'Today: show navigation', exact: true }).click();
+    const navigation = page.getByRole('navigation', { name: 'Navigation' });
     for (const place of ['Today', 'Inbox', 'Actions', 'Cycles', 'Evidence', 'Outcomes'])
-      await expect(page.getByRole('menuitem', { name: place, exact: true })).toBeVisible();
+      await expect(
+        navigation.getByRole('link', { name: new RegExp(`^${place}( \\d+)?$`, 'u') }),
+      ).toBeVisible();
   });
 
   test('renders the pending Review from exact GET-only reads without mutation or private custody', async ({
@@ -4260,11 +4260,19 @@ test.describe('dashboard real-browser quality', () => {
       await page.getByRole('button', { name: 'Menu', exact: true }).click();
       const menu = page.getByRole('menu', { name: 'Main menu' });
       await expect(menu).toBeVisible();
-      for (const name of ['Home', 'Graph', 'Inbox', 'Evidence', 'Console', 'Diagnostics'])
-        await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
-      await menu.getByRole('menuitem', { name: 'Console', exact: true }).click();
-      await expect(page.locator('[data-route-kind="planning.console"]')).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Keyboard shortcuts' })).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Home', exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
       await expect(menu).toBeHidden();
+      // Destinations live in the navigation panel behind the view name.
+      await page.locator('[data-chrome-slot="menu"] .canvas-chrome-view-picker button').click();
+      const navigation = page.getByRole('navigation', { name: 'Navigation' });
+      for (const name of ['Home', 'Graph', 'Inbox', 'Evidence', 'Console', 'Diagnostics'])
+        await expect(
+          navigation.getByRole('link', { name: new RegExp(`^${name}( \\d+)?$`, 'u') }),
+        ).toBeVisible();
+      await navigation.getByRole('link', { name: /^Console( \d+)?$/u }).click();
+      await expect(page.locator('[data-route-kind="planning.console"]')).toBeVisible();
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
     }
     await page.setViewportSize({ width: 599, height: 900 });
@@ -4273,12 +4281,186 @@ test.describe('dashboard real-browser quality', () => {
     await expect(page.locator('.pc-mobile-nav')).toBeVisible();
   });
 
-  test('shows the List count beside the view name from 600 to 1199', async ({ page }) => {
-    for (const width of [1440, 1199, 768, 600, 599, 390]) {
+  test('fits the List table and toolbar to its own width, with and without pinned panels', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const pin = async (slot: string, key: string, name: string) => {
+      const panel = page.locator(`[data-chrome-slot="${slot}"]`);
+      const button = panel.getByRole('button', { name, exact: true });
+      if ((await panel.getAttribute('data-open')) !== 'true') {
+        await page.keyboard.press(key);
+        await expect(panel).toHaveAttribute('data-open', 'true');
+      }
+      if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click();
+      await expect(button).toHaveAttribute('aria-pressed', 'true');
+    };
+    const states = [
+      { width: 1440, pinned: 'none', layout: 'desktop', labels: true },
+      { width: 1199, pinned: 'none', layout: 'desktop', labels: false },
+      { width: 1024, pinned: 'none', layout: 'desktop', labels: false },
+      { width: 900, pinned: 'none', layout: 'desktop', labels: false },
+      { width: 1440, pinned: 'sidebar', layout: 'desktop', labels: true },
+      { width: 1199, pinned: 'sidebar', layout: 'desktop', labels: false },
+      { width: 1024, pinned: 'sidebar', layout: 'tablet', labels: false },
+      { width: 1440, pinned: 'both', layout: 'desktop', labels: false },
+      { width: 1199, pinned: 'both', layout: 'tablet', labels: false },
+    ] as const;
+    for (const state of states) {
+      const name = `${state.width} px, pinned ${state.pinned}`;
+      await page.setViewportSize({ width: state.width, height: 900 });
+      await openFixture(page, '#/list', { planningScenario: 'delivery' });
+      if (state.pinned !== 'none') await pin('sidebar', 'Alt+BracketRight', 'Pin sidebar');
+      if (state.pinned === 'both') await pin('navigation', 'Alt+BracketLeft', 'Pin navigation');
+      const list = page.locator('.pc-list');
+      await expect(list, `layout at ${name}`).toHaveAttribute('data-list-layout', state.layout);
+      const clipped = await list.locator('.pc-list__toolbar').evaluate((toolbar) =>
+        [
+          ...toolbar.querySelectorAll<HTMLElement>(
+            '.pc-chip, .pc-chip__label, .pc-list__clear, .pc-list__filters',
+          ),
+        ]
+          .filter((control) => {
+            const tops: number[] = [];
+            const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              if (!node.textContent?.trim()) continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              for (const rect of range.getClientRects()) tops.push(rect.top);
+            }
+            const wrapped = Math.max(...tops) - Math.min(...tops) > 8;
+            return control.scrollWidth > control.clientWidth + 1 || wrapped;
+          })
+          .map((control) => control.textContent),
+      );
+      expect(clipped, `clipped toolbar controls at ${name}`).toEqual([]);
+      if (state.layout !== 'desktop') continue;
+      await expect(list.getByRole('heading', { level: 1, name: 'List' })).toBeVisible();
+      for (const column of ['ID', 'Title', 'Status', 'Priority', 'Updated']) {
+        await expect(
+          list.getByRole('columnheader', { name: column, exact: true }),
+          `${column} at ${name}`,
+        ).toBeVisible();
+      }
+      const labels = list.getByRole('columnheader', { name: 'Labels', exact: true });
+      if (state.labels) await expect(labels, `Labels at ${name}`).toBeVisible();
+      else await expect(labels, `Labels at ${name}`).toHaveCount(0);
+      const header = await list
+        .getByRole('columnheader', { name: 'Updated', exact: true })
+        .boundingBox();
+      const cell = await list.locator('tbody td[data-column="updated"]').first().boundingBox();
+      const box = await list.locator('.pc-list__window').boundingBox();
+      if (!header || !cell || !box) throw new Error(`Missing List geometry at ${name}.`);
+      expect(header.x + header.width, `Updated inside the List at ${name}`).toBeLessThanOrEqual(
+        box.x + box.width + 1,
+      );
+      const overflow = await list
+        .locator('.pc-list__window')
+        .evaluate((element) => element.scrollWidth - element.clientWidth);
+      expect(overflow, `table scrolls sideways at ${name}`).toBeLessThanOrEqual(1);
+      expect(Math.abs(cell.x - header.x), `Updated cell under its header at ${name}`).toBeLessThan(
+        1,
+      );
+    }
+  });
+
+  test('wraps the command in an unavailable step only between its words', async ({ page }) => {
+    for (const { route, width } of [
+      { route: '#/operate/today', width: 320 },
+      { route: '#/operate/today', width: 360 },
+      { route: '#/operate/today', width: 375 },
+      { route: '#/operate/today', width: 1440 },
+      { route: '#/operate/recovery', width: 375 },
+      { route: '#/operate/recovery', width: 1440 },
+    ]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openFixture(page, route);
+      const words = page.locator('.op-governed-reason .pc-command-text > span');
+      await expect(words.first(), `command on ${route}`).toBeVisible();
+      const problems = await words.evaluateAll((spans) => {
+        const contentRight = (element: Element) => {
+          const style = getComputedStyle(element);
+          return (
+            element.getBoundingClientRect().left +
+            element.clientLeft +
+            element.clientWidth -
+            Number.parseFloat(style.paddingRight)
+          );
+        };
+        const ancestor = (span: Element, test: (style: CSSStyleDeclaration) => boolean) => {
+          let element = span.parentElement;
+          while (element && !test(getComputedStyle(element))) element = element.parentElement;
+          if (!element) throw new Error(`No matching ancestor for ${span.textContent}.`);
+          return element;
+        };
+        return spans.flatMap((span) => {
+          const word = span.textContent ?? '';
+          const line = ancestor(span, (style) => !style.display.startsWith('inline'));
+          const clip = ancestor(span, (style) => style.overflowX !== 'visible');
+          const lineStyle = getComputedStyle(line);
+          const lineWidth =
+            line.clientWidth -
+            Number.parseFloat(lineStyle.paddingLeft) -
+            Number.parseFloat(lineStyle.paddingRight);
+          const element = span as HTMLElement;
+          const { whiteSpace, maxWidth } = element.style;
+          element.style.whiteSpace = 'nowrap';
+          element.style.maxWidth = 'none';
+          const single = element.getBoundingClientRect();
+          element.style.whiteSpace = whiteSpace;
+          element.style.maxWidth = maxWidth;
+          const rects = [...span.getClientRects()];
+          const box = span.getBoundingClientRect();
+          const found: string[] = [];
+          if (rects.length !== 1 || (single.width <= lineWidth && box.height > single.height + 1))
+            found.push(`${word} split`);
+          if (box.right > Math.min(contentRight(line), contentRight(clip)) + 0.5)
+            found.push(`${word} overflows`);
+          return found;
+        });
+      });
+      expect(problems, `command words on ${route} at ${width}`).toEqual([]);
+    }
+  });
+
+  test('puts the Operate page title before its metric tiles at every width', async ({ page }) => {
+    const routes = [
+      '#/operate/actions',
+      '#/operate/cycles',
+      '#/operate/evidence',
+      '#/operate/outcomes',
+      '#/operate/history',
+    ];
+    for (const width of [1440, 600, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const route of routes) {
+        await openFixture(page, route);
+        const workspace = page.locator('.pc-operate');
+        const title = await workspace.getByRole('heading', { level: 1 }).boundingBox();
+        const metrics = await workspace.locator('.pc-metrics').first().boundingBox();
+        if (!title || !metrics)
+          throw new Error(`Missing title or metrics on ${route} at ${width}.`);
+        expect(metrics.y, `metrics below the title on ${route} at ${width}`).toBeGreaterThan(
+          title.y + title.height,
+        );
+        if (width < 600) {
+          const bar = await page.locator('header.pc-topbar').boundingBox();
+          if (!bar) throw new Error(`Missing the phone top bar on ${route}.`);
+          expect(title.y, `title clear of the top bar on ${route}`).toBeGreaterThan(
+            bar.y + bar.height,
+          );
+        }
+      }
+    }
+  });
+
+  test('shows the List count beside the view name from 600 to 899', async ({ page }) => {
+    for (const width of [1440, 1199, 900, 899, 768, 600, 599, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await openFixture(page, '#/list');
       const count = page.locator('[data-chrome-slot="menu"] .pc-topbar__count');
-      if (width >= 600 && width < 1200) {
+      if (width >= 600 && width < 900) {
         await expect(count, `view count at ${width}`).toBeVisible();
         await expect(count).toHaveText(/^\d+ of \d+$/u);
       } else {

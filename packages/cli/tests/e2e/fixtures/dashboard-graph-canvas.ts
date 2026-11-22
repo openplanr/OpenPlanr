@@ -147,6 +147,37 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
       expect(Math.abs(centre.y - world.y) * moved.zoom).toBeLessThanOrEqual(2);
     });
 
+    for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+      test(`refits an untouched Graph on each grow and keeps a pan made after an in-place fit (${reducedMotion} motion)`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ reducedMotion });
+        await page.setViewportSize({ width: 1280, height: 720 });
+        await openFixture(page, '#/graph');
+        const fitted = await settleGraph(page);
+        await page.setViewportSize({ width: 800, height: 600 });
+        await openFixture(page, '#/graph');
+        await settleGraph(page);
+        await page.setViewportSize({ width: 1000, height: 660 });
+        await settleGraph(page);
+        await page.setViewportSize({ width: 1280, height: 720 });
+        const grown = await settleGraph(page);
+        expect(grown.zoom).toBeCloseTo(fitted.zoom, 6);
+        expect(Math.abs(grown.x - fitted.x) * grown.zoom).toBeLessThanOrEqual(1);
+        expect(Math.abs(grown.y - fitted.y) * grown.zoom).toBeLessThanOrEqual(1);
+
+        // This lens fits the camera where it already is.
+        await (await tool(page, 'Whole project')).click();
+        expect(await settleGraph(page)).toEqual(grown);
+        await page.mouse.move(640, 400);
+        await page.mouse.wheel(120, 80);
+        const moved = await settleGraph(page);
+        expect(moved).not.toEqual(grown);
+        await page.setViewportSize({ width: 1920, height: 1080 });
+        expect(await settleGraph(page)).toEqual(moved);
+      });
+    }
+
     test('fits the selection inside the safe area with the inspector open', async ({ page }) => {
       await openFixture(page, '#/graph', { planningScenario: 'delivery' });
       await settleGraph(page);
@@ -405,9 +436,12 @@ export function registerGraphCanvasBrowserTests(openFixture: OpenFixture) {
         await page.locator('.pc-graph-minimap__viewport').boundingBox(),
         'minimap viewport',
       );
-      // The chain is far wider than tall, so the whole graph spans the minimap's width.
-      expect(frame.x).toBeLessThanOrEqual(canvas.x + 1);
-      expect(frame.x + frame.width).toBeGreaterThanOrEqual(canvas.x + canvas.width - 1);
+      // The fitted view holds the whole chain, so the map is that view: inside the canvas and
+      // filling it along one axis.
+      expect(inside(frame, canvas, 0.5)).toBe(true);
+      const fillsWidth = Math.abs(frame.width - canvas.width) <= 1;
+      const fillsHeight = Math.abs(frame.height - canvas.height) <= 1;
+      expect(fillsWidth || fillsHeight).toBe(true);
       await expect(page.locator('.canvas-overview')).toBeVisible();
     });
 

@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { drawMinimap } from '@openplanr/canvas';
 import { ChromeProvider } from '@openplanr/canvas/react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
@@ -14,6 +13,7 @@ import {
   GraphCanvas,
   graphCanvasModel,
 } from '../../../../apps/dashboard/src/features/planning/graph-canvas.js';
+import { minimapFit } from '../../../../apps/dashboard/src/features/planning/graph-minimap.js';
 import { installKeyboardCoordinator } from '../../../../apps/dashboard/src/features/shell/keyboard-coordinator.js';
 import { routeSlotRef } from '../../../../apps/dashboard/src/features/shell/route-tools.js';
 import {
@@ -260,6 +260,8 @@ describe('dependency graph on the canvas engine', () => {
   it('centres the stage on the clicked minimap point and reveals the selection from the keyboard', async () => {
     const created = captureCanvasControllers();
     stubStageSize({ width: 1000, height: 600 });
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
     chromeSlot('panel');
     const { nodes, edges } = chain(30);
     const rendered = render(
@@ -272,19 +274,17 @@ describe('dependency graph on the canvas engine', () => {
     const minimap = rendered.getByRole('button', { name: 'Graph minimap, center viewport' });
     const canvas = required(minimap.querySelector('canvas'));
     vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(500, 400, 188, 116));
-    const transform = drawMinimap(
-      required(document.createElement('canvas').getContext('2d')),
+    const start = controller.screenToWorld({ x: 0, y: 0 });
+    const end = controller.screenToWorld({ x: 1000, y: 600 });
+    const transform = minimapFit(
+      graphCanvasModel(graphLayout(nodes, edges, 'source-to-target')).nodes,
       {
-        nodes: graphCanvasModel(graphLayout(nodes, edges, 'source-to-target')).nodes,
-        edges: [],
-        selection: [],
-        style: () => ({ fill: '#000', stroke: '#000' }),
-        viewport: { x: 0, y: 0, width: 0, height: 0 },
+        x: start.x,
+        y: start.y,
+        width: end.x - start.x,
+        height: end.y - start.y,
       },
-      { width: 188, height: 116, devicePixelRatio: 1 },
     );
-    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
-    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
     fireEvent.click(minimap, { detail: 1, clientX: 600, clientY: 470 });
     const centre = controller.screenToWorld({ x: 500, y: 300 });
     const expected = {
@@ -306,6 +306,36 @@ describe('dependency graph on the canvas engine', () => {
     });
     expect(Math.abs(middle.x - (safe.x + safe.width / 2))).toBeLessThanOrEqual(2);
     expect(Math.abs(middle.y - (safe.y + safe.height / 2))).toBeLessThanOrEqual(2);
+  });
+
+  it('keeps the minimap viewport frame inside the map and draws one node well inside it', async () => {
+    const created = captureCanvasControllers();
+    stubStageSize({ width: 1440, height: 900 });
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1440);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(900);
+    chromeSlot('panel');
+    render(
+      <ChromeProvider>
+        <Graph nodes={[node(0)]} edges={[]} />
+      </ChromeProvider>,
+    );
+    await settleFrames();
+    const controller = liveController(created);
+    const frame = required(document.querySelector<HTMLElement>('.pc-graph-minimap__viewport'));
+    const [x, y] = required(
+      /translate\(([-\d.e+]+)px, ([-\d.e+]+)px\)/u.exec(frame.style.transform),
+    )
+      .slice(1)
+      .map(Number);
+    const width = Number.parseFloat(frame.style.width);
+    const height = Number.parseFloat(frame.style.height);
+    expect(required(x)).toBeGreaterThanOrEqual(-0.5);
+    expect(required(y)).toBeGreaterThanOrEqual(-0.5);
+    expect(required(x) + width).toBeLessThanOrEqual(188.5);
+    expect(required(y) + height).toBeLessThanOrEqual(116.5);
+    // The frame is the stage in minimap pixels, which gives the map scale for the 230 px card.
+    const scale = width / (1440 / controller.getCamera().zoom);
+    expect(230 * scale).toBeLessThan(188 / 2);
   });
 
   it('dispatches each arrow once through the engine along connected neighbours and a cycle', async () => {

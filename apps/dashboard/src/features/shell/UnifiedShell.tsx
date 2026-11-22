@@ -350,7 +350,6 @@ function ShellFrame({
             }}
             themePreference={adapters?.themePreference}
             main={interactions.rootRef}
-            navigate={interactions.navigate}
             onOpenPalette={search.show}
             onOpenHelp={interactions.openHelp}
           />

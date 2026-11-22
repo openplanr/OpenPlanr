@@ -133,6 +133,15 @@
   min-width: 0;
 }
 
+/* The desktop toolbar wraps rather than clip its filter chips. */
+.pc-list[data-list-layout="desktop"] .pc-list__toolbar {
+  flex-wrap: wrap;
+}
+
+.pc-list[data-list-layout="desktop"] .pc-list__toolbar .pc-chip-menu {
+  flex: none;
+}
+
 .pc-list__toolbar .pc-chip {
   gap: 6px;
   height: 32px;
@@ -272,6 +281,15 @@
   box-sizing: border-box;
   height: 44px;
   border-bottom: 1px solid var(--op-line);
+}
+
+/* Without its Labels column the table fits a narrower window without scrolling. */
+.pc-list[data-list-labels="hidden"] .pc-table {
+  min-width: 720px;
+}
+
+.pc-list[data-list-labels="hidden"] .pc-table tr:not(.pc-table__spacer, .pc-table__group-header) {
+  grid-template-columns: 40px 112px minmax(0, 1fr) 132px 96px 88px;
 }
 
 .pc-list .pc-table thead > tr:first-child {
@@ -727,7 +745,7 @@ a.pc-list__group-id:hover {
   }
 }
 
-/* Tablet (600–1199px) and phone (below 600px): search, Filters and presets; rows without a header. */
+/* Tablet (from 600px, or wherever the table does not fit) and phone (below 600px): search, Filters and presets; rows without a header. */
 .pc-list[data-list-layout="phone"] {
   --pc-list-gutter: 2px;
 }

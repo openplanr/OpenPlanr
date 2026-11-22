@@ -65,6 +65,13 @@ export function ActionsPage({ currentBinding, current }: ActionsPageProps) {
           is inferred.
         </p>
       ) : null}
+      <SectionHeader
+        headingLevel={1}
+        eyebrow="planr-operate · actions"
+        title="Actions"
+        count={`${model.actions.length} ${model.actions.length === 1 ? 'action' : 'actions'}`}
+        description="Review approved work, its outcome, and the next safe step."
+      />
       {stateOrder.length > 0 ? (
         <ul className="pc-metrics" aria-label="Action states">
           {stateOrder.map((state) => (
@@ -77,13 +84,6 @@ export function ActionsPage({ currentBinding, current }: ActionsPageProps) {
           ))}
         </ul>
       ) : null}
-      <SectionHeader
-        headingLevel={1}
-        eyebrow="planr-operate · actions"
-        title="Actions"
-        count={`${model.actions.length} ${model.actions.length === 1 ? 'action' : 'actions'}`}
-        description="Review approved work, its outcome, and the next safe step."
-      />
       {model.actions.length === 0 ? (
         <StatePanel
           state="unavailable"

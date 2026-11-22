@@ -1,4 +1,5 @@
-import { GovernedButton } from '../../../design-system/components/index.js';
+import type { ReactNode } from 'react';
+import { CommandText, GovernedButton } from '../../../design-system/components/index.js';
 import { uniqueOperateReviewNavigationForCycle } from '../review/review-navigation.js';
 import type { OperateTodaySurfaceModel } from './today-model.js';
 
@@ -9,14 +10,22 @@ export type DecisionFocusProps = Readonly<{
   onContinuation?: (continuation: OperateTodayContinuation) => void | Promise<void>;
 }>;
 
-function continuationReason(model: OperateTodaySurfaceModel, hasPresenter: boolean): string | null {
+function continuationReason(
+  model: OperateTodaySurfaceModel,
+  hasPresenter: boolean,
+): ReactNode | null {
   if (!model.continuation) return 'No next step is available for this active work.';
+  const status = (
+    <>
+      To see where this cycle stands, run{' '}
+      <CommandText command={`openplanr operate resume ${model.activeCycle.cycleId}`} /> in your
+      terminal.
+    </>
+  );
   if (model.continuation.action.effect !== 'read-only' && !model.mutationEnabled) {
-    return 'This view is read-only, so changes are unavailable.';
+    return <>Read-only here. {status}</>;
   }
-  if (!hasPresenter) {
-    return 'This next step is visible, but its command control is unavailable.';
-  }
+  if (!hasPresenter) return <>The dashboard can&apos;t take this step. {status}</>;
   return null;
 }
 

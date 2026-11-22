@@ -924,6 +924,17 @@
 .pc-command-hint[data-size="sm"] .pc-command-hint__row {
   height: 26px;
 }
+.pc-command-text {
+  font-family: var(--pc-font-mono);
+}
+
+/* Each word wraps as a unit and breaks inside itself only when wider than the line. */
+.pc-command-text > span {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .pc-command-hint__command {
   display: inline-flex;
   flex: 1;
@@ -2745,6 +2756,9 @@ button.pc-work-item:disabled {
 }
 .op-governed-button[data-variant="secondary"] {
   border-color: var(--op-control-border);
+}
+.op-governed-button[data-variant="secondary"]:disabled {
+  border-color: var(--op-divider);
 }
 .op-governed-button[data-variant="secondary"]:hover:not(:disabled) {
   background: var(--op-raised);

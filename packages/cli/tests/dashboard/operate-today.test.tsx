@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { within } from '@testing-library/react';
 import axe from 'axe-core';
 import { JSDOM } from 'jsdom';
 import { selectOperateExperienceDisplaySurface } from 'planr-pipeline/dashboard/operate-experience-reader';
@@ -210,6 +211,27 @@ describe('T-037 verified Today display consumption', () => {
       />,
     );
     expect(linkedHtml).toContain(`href="${model.activeCycle.deepLink}"`);
+    // The dashboard cannot take the step itself, so the reason names the terminal command.
+    const step = {
+      ...model,
+      continuation: {
+        subjectId: 'act_reminder_settings',
+        action: {
+          tool: 'operate.action.execute',
+          label: 'Restore the previous reminder settings',
+          effect: 'machine-local-write',
+        },
+      },
+      mutationEnabled: true,
+    } as typeof model;
+    const stepBody = new JSDOM(renderToStaticMarkup(<DecisionFocus model={step} />)).window.document
+      .body;
+    const stepReason = `The dashboard can't take this step. To see where this cycle stands, run openplanr operate resume ${model.activeCycle.cycleId} in your terminal.`;
+    expect(stepBody.textContent).toContain(stepReason);
+    expect(within(stepBody).getByRole('button', { description: stepReason })).toBeTruthy();
+    expect(
+      [...stepBody.querySelectorAll('.pc-command-text > span')].map((word) => word.textContent),
+    ).toEqual(['openplanr', 'operate', 'resume', model.activeCycle.cycleId]);
     expect(html).toContain('Today decision workspace');
     expect(html).not.toContain('Today could not be read');
   });
