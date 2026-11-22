@@ -56,6 +56,8 @@ export async function fetchPlanningOperatingTrace(
       `/api/operate/planning/trace/${encodeURIComponent(options.specId)}`,
       options.identity,
       signal,
+      undefined,
+      true,
     ),
     options.identity,
     options.specId,

@@ -161,15 +161,17 @@ export function ReadError({
 }: {
   title: string;
   message: string;
-  onRetry: () => void;
+  onRetry?: (() => void) | undefined;
 }) {
   return (
     <div className="pc-state-card pc-state-error pc-detail__error" role="alert">
       <h2>{title}</h2>
       <p>{message}</p>
-      <Button size="sm" onClick={onRetry}>
-        Try again
-      </Button>
+      {onRetry && (
+        <Button size="sm" onClick={onRetry}>
+          Try again
+        </Button>
+      )}
     </div>
   );
 }

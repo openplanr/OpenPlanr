@@ -65,10 +65,110 @@ function coerceScalar(raw) {
   return inner;
 }
 
-function parseInlineArray(raw) {
-  const inner = raw.trim().slice(1, -1).trim();
-  if (inner === '') return [];
-  return inner.split(',').map((part) => coerceScalar(part));
+const YAML_ESCAPES = new Map(
+  Object.entries({
+    0: '\0',
+    a: '\x07',
+    b: '\b',
+    t: '\t',
+    n: '\n',
+    v: '\v',
+    f: '\f',
+    r: '\r',
+    e: '\x1b',
+    ' ': ' ',
+    '"': '"',
+    '/': '/',
+    '\\': '\\',
+    N: '\x85',
+    _: '\xa0',
+    L: '\u2028',
+    P: '\u2029',
+  }),
+);
+
+function flowScalar(token) {
+  if (token.startsWith("'") && token.endsWith("'")) return token.slice(1, -1).replaceAll("''", "'");
+  if (!token.startsWith('"') || !token.endsWith('"')) return coerceScalar(token);
+  return token
+    .slice(1, -1)
+    .replace(/\\(x[\da-fA-F]{2}|u[\da-fA-F]{4}|U[\da-fA-F]{8}|.)/gu, (_, sequence) => {
+      if (YAML_ESCAPES.has(sequence)) return YAML_ESCAPES.get(sequence);
+      if (sequence.length > 1) return String.fromCodePoint(Number.parseInt(sequence.slice(1), 16));
+      throw new SyntaxError('Unsupported escape in a double-quoted frontmatter value');
+    });
+}
+
+function parseMapList(raw) {
+  let offset = 1;
+  function spaces() {
+    while (offset < raw.length) {
+      if (/\s/u.test(raw[offset])) offset++;
+      else if (raw[offset] === '#') {
+        const end = raw.indexOf('\n', offset);
+        offset = end < 0 ? raw.length : end + 1;
+      } else break;
+    }
+  }
+  function consume(char) {
+    spaces();
+    if (raw[offset] !== char) return false;
+    offset++;
+    spaces();
+    return true;
+  }
+  function scalar(key = false) {
+    spaces();
+    const start = offset;
+    const quote = raw[offset];
+    if (quote === '"' || quote === "'") {
+      offset++;
+      while (offset < raw.length) {
+        const char = raw[offset++];
+        if (char === '\\' && quote === '"') offset++;
+        else if (char === quote) {
+          if (quote === "'" && raw[offset] === "'") {
+            offset++;
+            continue;
+          }
+          const token = raw.slice(start, offset);
+          return flowScalar(token);
+        }
+      }
+      throw new SyntaxError('Unterminated quoted frontmatter value');
+    }
+    while (offset < raw.length && !',}]'.includes(raw[offset]) && !(key && raw[offset] === ':')) {
+      offset++;
+    }
+    const token = raw.slice(start, offset).trim();
+    if (!token) throw new SyntaxError('Expected a frontmatter value');
+    return key ? token : coerceScalar(token);
+  }
+  function item() {
+    if (!consume('{')) return scalar();
+    const entries = new Map();
+    if (!consume('}')) {
+      do {
+        const key = scalar(true);
+        if (!consume(':')) throw new SyntaxError('Expected a colon after frontmatter map key');
+        if (entries.has(key)) throw new SyntaxError('Duplicate frontmatter map key');
+        entries.set(key, scalar());
+      } while (consume(',') && raw[offset] !== '}');
+      if (!consume('}')) throw new SyntaxError('Expected a closing frontmatter map brace');
+    }
+    return Object.fromEntries(entries);
+  }
+  const values = [];
+  if (!consume(']')) {
+    do {
+      values.push(item());
+    } while (consume(',') && raw[offset] !== ']');
+    if (!consume(']')) throw new SyntaxError('Expected a closing frontmatter list bracket');
+  }
+  const remainder = raw.slice(offset).trim();
+  if (remainder && !remainder.startsWith('#'))
+    throw new SyntaxError('Unexpected text after frontmatter list');
+  return values;
 }
 
 /**
@@ -126,7 +226,7 @@ export function parseFrontmatter(raw) {
         }
         const item = {};
         const firstKey = rawItem.slice(0, itemColon).trim();
-        item[firstKey] = coerceScalar(rawItem.slice(itemColon + 1));
+        item[firstKey] = flowScalar(rawItem.slice(itemColon + 1).trim());
         j++;
         while (
           j < lines.length &&
@@ -135,7 +235,9 @@ export function parseFrontmatter(raw) {
         ) {
           const nested = lines[j].trim();
           const nestedColon = nested.indexOf(':');
-          item[nested.slice(0, nestedColon).trim()] = coerceScalar(nested.slice(nestedColon + 1));
+          item[nested.slice(0, nestedColon).trim()] = flowScalar(
+            nested.slice(nestedColon + 1).trim(),
+          );
           j++;
         }
         items.push(item);
@@ -150,7 +252,21 @@ export function parseFrontmatter(raw) {
     }
 
     if (value[0] === '[') {
-      out[key] = parseInlineArray(value);
+      if (!FLAT_MAP_ARRAY_KEYS.has(key)) {
+        // Custom metadata keeps the native reader's existing scalar-list semantics.
+        const inner = value.slice(1, -1).trim();
+        out[key] = inner === '' ? [] : inner.split(',').map(coerceScalar);
+        continue;
+      }
+      const continuation = [];
+      while (
+        !/\]\s*(?:#.*)?$/u.test(continuation.at(-1) ?? value) &&
+        i + 1 < lines.length &&
+        /^(?:\s|\]|$)/u.test(lines[i + 1])
+      ) {
+        continuation.push(lines[++i].trim());
+      }
+      out[key] = parseMapList([value, ...continuation].join('\n'));
       continue;
     }
 

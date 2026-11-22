@@ -65,6 +65,37 @@ describe('Planning operating origin read state', () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
+  it('shows a verified access refusal without exposing the private gateway message', async () => {
+    const { fetchPlanningOperatingTrace } = await vi.importActual<
+      typeof import('../../../../apps/dashboard/src/features/operate/planning/planning-actions.js')
+    >('../../../../apps/dashboard/src/features/operate/planning/planning-actions.js');
+    const fetcher = async () =>
+      new Response(
+        JSON.stringify({
+          ok: false,
+          error: {
+            reasonCode: 'E_OPERATE_PLANNING_ACCESS',
+            retryable: false,
+            message: 'private record path',
+          },
+        }),
+        { status: 403 },
+      );
+    mocks.fetch.mockImplementationOnce((options) =>
+      fetchPlanningOperatingTrace({ ...options, origin: 'http://localhost:7473', fetcher }),
+    );
+    render(
+      <PlanningOperatingOriginSection
+        specId={firstSpec}
+        binding={binding}
+        node={declaredNode(firstSpec)}
+      />,
+    );
+    await screen.findByText(/does not have access to this operating origin/);
+    expect(screen.queryByText(/private record path/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry operating origin' })).toBeNull();
+  });
+
   it('removes the previous origin while a new Spec loads and keeps failed reads unavailable', async () => {
     mocks.fetch.mockResolvedValueOnce(creation(firstSpec));
     let rejectNext: (reason: Error) => void = () => {};

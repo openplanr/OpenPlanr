@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../app/providers.js';
 import { Button, Card, InlineAlert } from '../../design-system/components/index.js';
+import { readFailure } from '../../lib/api/read-failure.js';
 import type { DashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { createDashboardQueryIdentity } from '../../lib/binding/query-identity.js';
 import { fetchPlanningOperatingTrace } from '../operate/planning/planning-actions.js';
@@ -32,6 +33,7 @@ type OriginRead = Readonly<{
   status: 'loading' | 'ready' | 'unavailable';
   envelope: Record<string, unknown> | null;
   reason?: string;
+  retryable?: boolean;
 }>;
 
 /** Read one access-safe origin; obsolete identity results never cross into the current view. */
@@ -120,13 +122,13 @@ export function PlanningOperatingOriginSection({
           status: 'ready',
           envelope: { origin: creation.origin, progress: creation.progress },
         });
-      } catch {
+      } catch (error) {
         if (!cancelled)
           setRead({
             key,
             status: 'unavailable',
             envelope: null,
-            reason: 'The access-safe operating origin read failed or could not be verified.',
+            ...readFailure(error, 'The operating origin'),
           });
       }
     };
@@ -156,7 +158,7 @@ export function PlanningOperatingOriginSection({
             tone="info"
             title="Operating origin unavailable"
             actions={
-              !unavailableReason ? (
+              !unavailableReason && current?.retryable !== false ? (
                 <Button size="sm" onClick={retry}>
                   Retry operating origin
                 </Button>
