@@ -33,7 +33,8 @@ export function registerVerifiedDetailTest() {
       execFileSync(
         process.execPath,
         [
-          join(workspace, 'packages/cli/bin/openplanr.js'),
+          createRequire(import.meta.url).resolve('tsx/cli'),
+          join(workspace, 'packages/cli/src/cli/index.ts'),
           '--project-dir',
           project,
           'graph',
