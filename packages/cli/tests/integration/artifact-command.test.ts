@@ -1040,6 +1040,51 @@ describePosix('artifact share review links', { timeout: 30_000 }, () => {
     expect(human.stdout).toContain('The browser did not open the link within 0.5 seconds.');
   });
 
+  it('completes the share and prints the link when the wait override is invalid', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>bad wait</title>');
+    const bin = join(dir, 'bin');
+    mkdirSync(bin);
+    for (const name of ['open', 'xdg-open']) {
+      writeFileSync(join(bin, name), '#!/bin/sh\nexit 0\n');
+      chmodSync(join(bin, name), 0o755);
+    }
+    const service = await startShareService();
+    try {
+      for (const [index, wait] of ['abc', '9999999999'].entries()) {
+        const json = await runAsync(
+          [
+            'artifact',
+            'share',
+            'artifact.html',
+            '--secret-output',
+            `room${index}.json`,
+            '--json',
+            '--yes',
+          ],
+          dir,
+          {
+            PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`,
+            OPENPLANR_SHARE_BASE: service.base,
+            OPENPLANR_HANDOFF_WAIT_MS: wait,
+          },
+        );
+        expect(json.status, json.stderr).toBe(0);
+        const recovery = readPrivate(join(dir, `room${index}.json`));
+        expect(JSON.parse(json.stdout)).toMatchObject({
+          ok: true,
+          reviewUrl: roomReviewUrl(recovery),
+          opened: false,
+        });
+        expect(json.stderr).toContain('The browser could not be opened');
+        expect(json.stderr).toContain('OPENPLANR_HANDOFF_WAIT_MS must be');
+        expect(json.stderr).not.toContain('TimeoutOverflowWarning');
+      }
+    } finally {
+      await service.close();
+    }
+  });
+
   it('refuses a saved owner or management link without echoing it', async () => {
     const dir = temporary();
     const key = 'K'.repeat(43);

@@ -218,23 +218,23 @@ const REVIEW_LINK_LABEL = 'Review link (safe to share)';
 
 type SecretHandoff = { handoff: ArtifactSecretUrlHandoff; waitMs: number } | { error: string };
 
-/** The handoff wait; `OPENPLANR_HANDOFF_WAIT_MS` shortens it for tests. */
+/** The handoff wait; `OPENPLANR_HANDOFF_WAIT_MS` shortens it for tests, up to the default. */
 function handoffWaitMs(): number {
   const raw = process.env.OPENPLANR_HANDOFF_WAIT_MS?.trim();
   if (!raw) return ARTIFACT_HANDOFF_WAIT_MS;
   const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value <= 0)
+  if (!Number.isSafeInteger(value) || value <= 0 || value > ARTIFACT_HANDOFF_WAIT_MS)
     throw new ArtifactCommandError(
       'E_ARTIFACT_INPUT_INVALID',
-      `OPENPLANR_HANDOFF_WAIT_MS must be a positive whole number of milliseconds, not "${raw}".`,
+      `OPENPLANR_HANDOFF_WAIT_MS must be a whole number of milliseconds from 1 to ${ARTIFACT_HANDOFF_WAIT_MS}, not "${raw}".`,
     );
   return value;
 }
 
-/** Opens a capability URL through the loopback handoff; a launch failure is reported, not fatal. */
+/** Opens a capability URL through the loopback handoff; any failure is reported, not fatal. */
 async function startSecretHandoff(url: string): Promise<SecretHandoff> {
-  const waitMs = handoffWaitMs();
   try {
+    const waitMs = handoffWaitMs();
     return { handoff: await openArtifactSecretUrl(url, { waitMs }), waitMs };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
