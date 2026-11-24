@@ -481,11 +481,24 @@ export async function openExternalUrl(url: string): Promise<void> {
   });
 }
 
-/** Keep capability-bearing URLs out of process argv by opening an opaque one-shot loopback handoff. */
+export const ARTIFACT_HANDOFF_WAIT_MS = 30_000;
+
+export interface ArtifactSecretUrlHandoff {
+  /** Resolves true once the browser fetched the handoff, false when the wait elapses first. */
+  readonly served: Promise<boolean>;
+}
+
+/**
+ * Keep capability-bearing URLs out of process argv by opening an opaque one-shot loopback handoff.
+ * The handoff server keeps the process alive until it is used or `waitMs` elapses.
+ */
 export async function openArtifactSecretUrl(
   url: string,
-  { openUrl = openExternalUrl }: { openUrl?: (value: string) => Promise<void> } = {},
-): Promise<void> {
+  {
+    openUrl = openExternalUrl,
+    waitMs = ARTIFACT_HANDOFF_WAIT_MS,
+  }: { openUrl?: (value: string) => Promise<void>; waitMs?: number } = {},
+): Promise<ArtifactSecretUrlHandoff> {
   let target: URL;
   try {
     target = new URL(url);
@@ -509,6 +522,20 @@ export async function openArtifactSecretUrl(
   const nonce = randomBytes(32).toString('hex');
   let expectedHost = '';
   const safeHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' };
+  let settle: (value: boolean) => void = () => undefined;
+  const served = new Promise<boolean>((resolve) => {
+    settle = resolve;
+  });
+  let timer: NodeJS.Timeout | undefined;
+  let finished = false;
+  const finish = (value: boolean) => {
+    if (finished) return;
+    finished = true;
+    if (timer) clearTimeout(timer);
+    server.close();
+    server.closeAllConnections();
+    settle(value);
+  };
   const server = createServer((request, response) => {
     const origin = request.headers.origin;
     if (
@@ -520,37 +547,36 @@ export async function openArtifactSecretUrl(
       response.writeHead(404, safeHeaders).end();
       return;
     }
+    response.once('finish', () => finish(true));
     response
       .writeHead(302, {
         location: target.toString(),
+        connection: 'close',
         ...safeHeaders,
       })
       .end();
-    server.close();
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', () => resolve());
   });
-  server.unref();
   const address = server.address();
   if (!address || typeof address === 'string') {
-    server.close();
+    finish(false);
     throw new ArtifactCommandError(
       'E_ARTIFACT_BROWSER_OPEN_FAILED',
       'Secret browser handoff could not bind loopback.',
     );
   }
   expectedHost = `127.0.0.1:${address.port}`;
-  const timer = setTimeout(() => server.close(), 60_000);
-  timer.unref();
+  timer = setTimeout(() => finish(false), waitMs);
   try {
     await openUrl(`http://127.0.0.1:${address.port}/handoff/${nonce}`);
   } catch (error) {
-    clearTimeout(timer);
-    server.close();
+    finish(false);
     throw error;
   }
+  return { served };
 }
 
 const SECRET_FILE_LIMIT = 1024 * 1024;
@@ -1579,6 +1605,25 @@ export function readArtifactSecretInput(input: string): ArtifactSecretBundle {
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
   }
+}
+
+export interface ArtifactShareLinkStatus {
+  transport: ArtifactSecretBundle['transport'];
+  /** Absent for fragment links, which carry the encoded artifact itself. */
+  reviewUrl?: string;
+}
+
+/** Reads the shareable review link saved in a private share file, offline. */
+export function readArtifactShareLinkStatus(input: string): ArtifactShareLinkStatus {
+  const secret = readArtifactSecretInput(input);
+  if (secret.transport === 'fragment') return { transport: 'fragment' };
+  const authority = new URLSearchParams(new URL(secret.reviewUrl).hash.slice(1));
+  if (authority.has('o') || authority.has('m'))
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_SECRET_INPUT',
+      'The saved review link carries owner or management authority; it is not safe to share.',
+    );
+  return { transport: secret.transport, reviewUrl: secret.reviewUrl };
 }
 
 /**

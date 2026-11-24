@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import type { Command } from 'commander';
-import { ArtifactCommandError } from '../../services/artifact-pipeline-service.js';
+import {
+  ArtifactCommandError,
+  type ArtifactShareLinkStatus,
+  readArtifactShareLinkStatus,
+} from '../../services/artifact-pipeline-service.js';
 import {
   DESIGN_HANDOFF_ACTIONS,
   DESIGN_MANAGE_ACTIONS,
@@ -89,6 +93,30 @@ function emit(json: boolean, result: object, summarize: () => void) {
   else summarize();
 }
 
+/** Prints the reviewer link from a private share file; owner and management links stay in the file. */
+function emitShareFileStatus(input: string, json: boolean): void {
+  let status: ArtifactShareLinkStatus;
+  try {
+    status = readArtifactShareLinkStatus(input);
+  } catch (error) {
+    if (!(error instanceof ArtifactCommandError) || error.code !== 'E_ARTIFACT_SECRET_INPUT')
+      throw error;
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_INPUT_INVALID',
+      `This operation requires a design-document.json file or a private share file. ${error.message}`,
+    );
+  }
+  emit(json, { ok: true, action: 'artifact_share_status', ...status }, () => {
+    display.keyValue('Transport', status.transport);
+    if (status.reviewUrl) {
+      display.keyValue('Review link (safe to share)', status.reviewUrl);
+      logger.dim(
+        'Read offline from the private file; this does not check whether the link was created or still exists.',
+      );
+    } else logger.dim('Fragment links carry the artifact itself; copy it from the private file.');
+  });
+}
+
 /** Design-only share, status, management, feedback and handoff commands under `artifact`. */
 export function registerDesignShareCommands(artifact: Command, context: DesignShareContext): void {
   artifact
@@ -106,11 +134,19 @@ export function registerDesignShareCommands(artifact: Command, context: DesignSh
 
   artifact
     .command('status <file>')
-    .description('Show whether a design is shared, its review link and pending work')
+    .description(
+      'Show whether a design is shared, its review link and pending work, or the review link saved in a private share file',
+    )
     .option('--json', 'emit machine-readable output', false)
     .action(async (file: string, _options, command: Command) => {
-      const result = await runDesignShareAction(designDocument(context, file), 'status');
-      emit(Boolean(command.optsWithGlobals().json), result, () => {
+      const json = Boolean(command.optsWithGlobals().json);
+      const input = context.resolveInput(file);
+      if (!isDesignDocumentFile(input)) {
+        emitShareFileStatus(input, json);
+        return;
+      }
+      const result = await runDesignShareAction(input, 'status');
+      emit(json, result, () => {
         display.keyValue('Shared', result.shared ? 'yes' : 'no');
         if (result.url) display.keyValue('Review link', result.url);
       });

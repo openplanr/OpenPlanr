@@ -26,6 +26,7 @@ import {
   openArtifactSecretUrl,
   openExternalUrl,
   readArtifactSecretInput,
+  readArtifactShareLinkStatus,
   reserveArtifactSecretExport,
   verifyLiveRoomRecoveryCustody,
   writeArtifactSecretExport,
@@ -135,6 +136,80 @@ describe('artifact secret custody', () => {
     expect(accepted.headers.get('location')).toBe(secret.reviewUrl);
     expect(accepted.headers.get('cache-control')).toBe('no-store');
     expect(accepted.headers.get('referrer-policy')).toBe('no-referrer');
+  });
+
+  it('reports a served handoff once and closes it', async () => {
+    let handoff = '';
+    const opened = await openArtifactSecretUrl(secret.reviewUrl, {
+      openUrl: async (value) => {
+        handoff = value;
+      },
+    });
+    const accepted = await fetch(handoff, { redirect: 'manual' });
+    expect(accepted.status).toBe(302);
+    expect(accepted.headers.get('connection')).toBe('close');
+    await expect(opened.served).resolves.toBe(true);
+    await expect(fetch(handoff, { redirect: 'manual' })).rejects.toThrow();
+  });
+
+  it('closes an unused handoff after its wait and reports it unserved', async () => {
+    let handoff = '';
+    const opened = await openArtifactSecretUrl(secret.reviewUrl, {
+      openUrl: async (value) => {
+        handoff = value;
+      },
+      waitMs: 50,
+    });
+    await expect(opened.served).resolves.toBe(false);
+    await expect(fetch(handoff, { redirect: 'manual' })).rejects.toThrow();
+  });
+
+  it('closes the handoff and rethrows when the browser cannot be launched', async () => {
+    let handoff = '';
+    await expect(
+      openArtifactSecretUrl(secret.reviewUrl, {
+        openUrl: async (value) => {
+          handoff = value;
+          throw new Error('no browser');
+        },
+      }),
+    ).rejects.toThrow('no browser');
+    await expect(fetch(handoff, { redirect: 'manual' })).rejects.toThrow();
+  });
+
+  it('reads only the reviewer link from a private share file', () => {
+    const dir = temporary();
+    const room = join(dir, 'room.secret.json');
+    writeArtifactSecretExport(room, secret);
+    expect(readArtifactShareLinkStatus(room)).toEqual({
+      transport: 'live-room',
+      reviewUrl: secret.reviewUrl,
+    });
+    const fragment = join(dir, 'fragment.secret.json');
+    writeArtifactSecretExport(fragment, {
+      schemaVersion: '1.0.0',
+      kind: 'openplanr-artifact-share-secrets',
+      transport: 'fragment',
+      reviewUrl: 'https://share.openplanr.dev/#v1.payload',
+    });
+    expect(readArtifactShareLinkStatus(fragment)).toEqual({ transport: 'fragment' });
+  });
+
+  it('refuses a saved review link that carries owner or management authority', () => {
+    const dir = temporary();
+    for (const [name, reviewUrl] of [
+      ['owner', secret.ownerUrl],
+      ['manage', secret.manageUrl],
+    ] as const) {
+      const file = join(dir, `${name}.secret.json`);
+      writeArtifactSecretExport(file, {
+        schemaVersion: '1.0.0',
+        kind: 'openplanr-artifact-share-secrets',
+        transport: 'short',
+        reviewUrl: String(reviewUrl),
+      });
+      expect(() => readArtifactShareLinkStatus(file)).toThrowError(/not safe to share/u);
+    }
   });
 
   it('rejects unknown secret-envelope fields and non-loopback HTTP before network use', () => {

@@ -94,14 +94,34 @@ review URL lets anyone with the link view and comment. A distinct owner-verdict
 URL plus the matching private P-256 signer can approve or request changes. The
 management URL can only pause/reopen comments or delete the room. The required
 `--secret-output` path is reserved exclusively, then an exact recovery bundle
-containing all three URLs and the owner signer is made durable at mode 0600
-before the first room request. A lost response is retried once with the same
+containing the room key, the separate capabilities and the owner signer is made
+durable at mode 0600 before the first room request. A lost response is retried once with the same
 prepared room identity, ciphertext, and capabilities, so it cannot create a
 duplicate or rotate the recovery URLs. A validated no-effect rejection revokes
 the bundle; an ambiguous outcome preserves it and returns a bounded, path-free
 recovery error. New feedback synchronizes to other open review tabs immediately.
 The artifact itself remains immutable and the service never receives the
 private signer.
+
+How to obtain each link:
+
+| Link | Who may have it | Where it comes from |
+| --- | --- | --- |
+| Review link | Anyone you ask to review | Printed as `Review link (safe to share)` when the room is created, `reviewUrl` in `--json`, and `openplanr artifact status <private-file>` later |
+| Owner-verdict link | You only | Not printed. In the private file it is `<origin>/r/<body.roomId>#k=<key>&r=<body.readCapability>&o=<body.ownerCapability>` |
+| Management link | You only | Not printed. Same as the owner-verdict link with `&m=<body.manageCapability>` in place of the `&o=` part |
+
+Rooms expire after seven days unless `--ttl 1d` or `--ttl 30d` is given.
+`artifact status` reads the private file offline: it does not check whether the
+room was created or still exists, and it refuses a saved link that carries
+owner-verdict or management authority. Generic shares name the review link
+`reviewUrl`; design and diagram results name theirs `url`.
+
+When the command opens the browser, it waits up to 30 seconds for the browser to
+request the link through a one-time loopback handoff, so the capability URL never
+appears in a process argument. In `--json`, `opened` is `true` only when the
+browser requested it. A browser that cannot be launched leaves the share in place,
+prints a warning (on stderr with `--json`) and reports `opened: false`.
 
 Use `--snapshot` for the immutable sharing model. Artifacts whose encoded
 fragments are 8,000 characters or less use
@@ -113,7 +133,15 @@ Larger artifacts require an explicit encrypted short-link upload. OpenPlanr
 compresses the envelope, encrypts it with AES-256-GCM, uploads ciphertext, and
 puts the key only after `#k=` in the URL. The service sees request metadata and
 ciphertext, never plaintext or the key. Links are immutable and expire after
-1, 7, or 30 days. Save the one-time deletion token when it is displayed.
+1, 7 (the default), or 30 days. The command prints the short link as
+`Review link (safe to share)` and adds it to `--json` as `reviewUrl`;
+`openplanr artifact status <private-file>` prints it again from the
+`--secret-output` file. The deletion token is never printed: it stays in that
+file and in the private copy under `PLANR_HOME/artifact-pastes`.
+
+Fragment links are not printed, because they carry the encoded artifact. When the
+browser is not opened, `--secret-output` is required and the fragment link is
+written to that file as `reviewUrl`.
 
 ## Return and import feedback
 

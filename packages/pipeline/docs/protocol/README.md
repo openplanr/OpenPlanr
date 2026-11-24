@@ -123,8 +123,8 @@ sharing is always explicit. New generic shares use an encrypted live room: the
 ordinary URL can view and comment; a separate owner-verdict URL plus its
 client-held signing key can approve or request changes; and a management URL
 can only pause/reopen comments or delete the room. Browser creation downloads a
-full recovery bundle (all three scoped URLs plus the private owner key) before
-making the room request and retains one opaque prepared attempt for exact retry
+full recovery bundle (the room key, the three scoped capabilities and the private
+owner key) before making the room request and retains one opaque prepared attempt for exact retry
 after an ambiguous response. Exact server replay returns the same receipt;
 divergent, deleted, and expired identities fail closed. Small fragment
 and encrypted short links remain explicit immutable snapshot alternatives. The

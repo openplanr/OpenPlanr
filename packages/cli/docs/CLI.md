@@ -767,7 +767,7 @@ openplanr artifact open <file> [--title <title>] [--root <asset-root>] [--theme 
 openplanr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--snapshot] [--short] [--ttl 1d|7d|30d] [--secret-output <private-file>] [--no-open] [--json] [--yes]
 openplanr artifact publish <diagram-manifest|diagram-bundle|design-document> [--yes] [--json]
 openplanr artifact sync <diagram-manifest|diagram-bundle|design-document> [--json]
-openplanr artifact status <design-document> [--json]
+openplanr artifact status <design-document|private-share-file> [--json]
 openplanr artifact manage <design-document> --action rotate|pause|resume|revoke|delete|access|recovery|restore [--output <new-path>] [--input <recovery-file>] [--yes] [--json]
 openplanr artifact feedback <design-document> [--action inspect|export|import|select|resolve] [--format json|markdown] [--scope current|all] [--output <new-path>] [--input <file>] [--json]
 openplanr artifact handoff <design-document> [--action draft|inspect|update|approve|category|disposition] [--input <file|->] [--json]
@@ -786,7 +786,13 @@ Native diagram sharing does not accept `--snapshot`, `--short`, or `--ttl`;
 export HTML first to choose the generic snapshot transport.
 
 A shared design is managed from the same command. `status` shows the review link
-and whether the current revision is published, without printing secrets. `manage`
+and whether the current revision is published, without printing secrets. Given the
+private file of a generic share instead, `status` reads it offline and prints its
+transport and review link (`reviewUrl` in `--json`); it never prints owner-verdict or
+management links or the deletion token, refuses a link that carries them, does not
+print fragment links, and does not check whether the link was created or still exists.
+Design and diagram results name their review link `url`; generic shares name theirs
+`reviewUrl`. `manage`
 rotates the reviewer access token, pauses or resumes comments, revokes or deletes
 the review, prints the reviewer token with `--action access --json`, and writes or
 restores a private recovery file. Without `--output`, the recovery file is a new
@@ -813,11 +819,23 @@ the review URL can comment, the owner-verdict URL plus its matching private
 signer can decide, and the management URL can pause/reopen comments or delete
 the room but cannot decide. Live rooms require `--secret-output`; before any
 network request, the CLI makes an exact recovery bundle durable at mode 0600
-with all three URLs and the owner signer. A lost response retries the same
-prepared room once. Definite no-effect rejection revokes the bundle, while an
-ambiguous outcome retains it and emits only a bounded, path-free recovery
-error. `--snapshot` selects the older immutable fragment/short-link flow;
-encrypted short links default to a seven-day expiry.
+with the room key, the three scoped capabilities and the owner signer. A lost
+response retries the same prepared room once. Definite no-effect rejection
+revokes the bundle, while an ambiguous outcome retains it and emits only a
+bounded, path-free recovery error. `--snapshot` selects the older immutable
+fragment/short-link flow. Live rooms and encrypted short links expire after
+seven days unless `--ttl 1d` or `--ttl 30d` is given.
+
+A created live room or encrypted short link prints `Review link (safe to share)`
+and adds `reviewUrl` to `--json`. That is the link to send. Owner-verdict and
+management links and the short link's deletion token stay in the private file;
+`artifact status <private-file>` prints the review link again later. Fragment
+links carry the encoded artifact, so they are not printed; with `--no-open` they
+are written to the `--secret-output` file. When the command opens the browser, it
+waits up to 30 seconds for the browser to request the link through a one-time
+loopback handoff. In `--json`, `opened` is `true` only when the browser did; a
+browser that cannot be launched leaves `opened: false` and the share in place, and
+the warning goes to stderr.
 See [Artifact review and private sharing](ARTIFACT_REVIEW.md)
 for the sandbox, privacy, remote/SSH, stale-review, offline, and self-hosting
 contracts.

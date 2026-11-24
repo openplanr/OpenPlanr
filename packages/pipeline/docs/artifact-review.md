@@ -150,8 +150,8 @@ The ordinary `/r/<id>#k=…&w=…` link lets anyone who receives it read and add
 comments; pins, replies, and review state synchronize in open tabs without
 creating replacement URLs. Owner decisions use a separate `o=…` URL plus the
 matching client-held P-256 owner key. Before any room request, browser creation
-downloads one private recovery bundle containing the reviewer, owner-verdict,
-and management URLs plus that owner key, then requires a second explicit
+downloads one private recovery bundle containing the room key, the reviewer,
+owner-verdict and management capabilities, and that owner key, then requires a second explicit
 confirmation. The same opaque prepared request is retained for exact retry if
 the Worker commits but its response is lost; a divergent replay conflicts and
 cannot create another room. If recovery export or download fails, no room is
@@ -278,8 +278,9 @@ metadata and ciphertext to the service, but not plaintext or the decryption key.
 New generic `openplanr artifact share <file>` links create one stable live room by
 default. The review URL has a decryption key and a write capability in its
 fragment, so anyone who has that link can view and comment. The creator also
-receives a pre-effect private recovery bundle with the owner-verdict URL, its
-matching downloaded owner key, and the other two scoped URLs. The same prepared
+receives a pre-effect private recovery bundle with the room key, the
+owner-verdict capability, its matching downloaded owner key, and the other two
+scoped capabilities; the three links are formed from these. The same prepared
 identity, ciphertext, key, and capabilities are reused after an ambiguous
 response; they are never silently rotated. A third, private
 management URL can pause or reopen comments or irreversibly delete the room,
