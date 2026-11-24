@@ -748,7 +748,10 @@ function expectNoOwnerSecrets(output: string, file: PrivateShareFile, dir: strin
   expect(output).not.toContain(dir);
 }
 
-describe('artifact share review links', { timeout: 30_000 }, () => {
+/** The browser shims replace `open` and `xdg-open`; Windows launches through `cmd start`. */
+const describePosix = describe.skipIf(process.platform === 'win32');
+
+describePosix('artifact share review links', { timeout: 30_000 }, () => {
   it('keeps the opened short-link handoff reachable until the browser uses it', async () => {
     const dir = temporary();
     writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>opened short</title>');
@@ -994,6 +997,81 @@ describe('artifact share review links', { timeout: 30_000 }, () => {
       expect(`${fragment.stdout}${fragment.stderr}`).not.toContain('#v1.');
     } finally {
       await service.close();
+    }
+  });
+
+  it('reports opened false and warns when the browser never requests the link', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>never fetched</title>');
+    const bin = join(dir, 'bin');
+    mkdirSync(bin);
+    for (const name of ['open', 'xdg-open']) {
+      writeFileSync(join(bin, name), '#!/bin/sh\nexit 0\n');
+      chmodSync(join(bin, name), 0o755);
+    }
+    const env = {
+      PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`,
+      OPENPLANR_HANDOFF_WAIT_MS: '500',
+    };
+    const started = Date.now();
+    const json = await runAsync(
+      ['artifact', 'share', 'artifact.html', '--snapshot', '--json', '--yes'],
+      dir,
+      env,
+    );
+    expect(json.status, json.stderr).toBe(0);
+    expect(Date.now() - started).toBeLessThan(20_000);
+    expect(json.stdout.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      ok: true,
+      transport: 'fragment',
+      opened: false,
+    });
+    expect(json.stderr).toContain('The browser did not open the link within 0.5 seconds.');
+    expect(json.stderr).toContain('--no-open --secret-output <private-file>');
+
+    const human = await runAsync(
+      ['artifact', 'share', 'artifact.html', '--snapshot', '--yes'],
+      dir,
+      env,
+    );
+    expect(human.status, human.stderr).toBe(0);
+    expect(human.stdout).toContain('Waiting up to 0.5 seconds for the browser to open the link');
+    expect(human.stdout).toContain('The browser did not open the link within 0.5 seconds.');
+  });
+
+  it('refuses a saved owner or management link without echoing it', async () => {
+    const dir = temporary();
+    const key = 'K'.repeat(43);
+    const capability = 'Z'.repeat(43);
+    for (const parameter of ['o', '%6D']) {
+      const reviewUrl = `https://share.example.test/r/${'a'.repeat(16)}#k=${key}&${parameter}=${capability}`;
+      writeFileSync(
+        join(dir, 'owner.json'),
+        JSON.stringify({
+          schemaVersion: '1.0.0',
+          kind: 'openplanr-artifact-share-secrets',
+          transport: 'short',
+          reviewUrl,
+        }),
+        { mode: 0o600 },
+      );
+      chmodSync(join(dir, 'owner.json'), 0o600);
+      const refusal =
+        'The saved review link carries owner or management authority; it is not safe to share.';
+      const json = await runAsync(['artifact', 'status', 'owner.json', '--json'], dir);
+      expect(json.status).not.toBe(0);
+      expect(JSON.parse(json.stdout)).toMatchObject({
+        code: 'E_ARTIFACT_INPUT_INVALID',
+        problem: refusal,
+      });
+      const human = await runAsync(['artifact', 'status', 'owner.json'], dir);
+      expect(human.status).not.toBe(0);
+      const output = `${json.stdout}${json.stderr}${human.stdout}${human.stderr}`;
+      expect(output).toContain(refusal);
+      expect(output).not.toContain('requires a design-document.json');
+      for (const secret of [capability, key, reviewUrl, 'share.example.test'])
+        expect(output).not.toContain(secret);
     }
   });
 

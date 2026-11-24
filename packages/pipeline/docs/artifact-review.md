@@ -150,8 +150,9 @@ The ordinary `/r/<id>#k=…&w=…` link lets anyone who receives it read and add
 comments; pins, replies, and review state synchronize in open tabs without
 creating replacement URLs. Owner decisions use a separate `o=…` URL plus the
 matching client-held P-256 owner key. Before any room request, browser creation
-downloads one private recovery bundle containing the room key, the reviewer,
-owner-verdict and management capabilities, and that owner key, then requires a second explicit
+downloads one private recovery bundle containing the room key, the read
+capability, the three scoped capabilities (reviewer, owner-verdict, management)
+and that owner key, then requires a second explicit
 confirmation. The same opaque prepared request is retained for exact retry if
 the Worker commits but its response is lost; a divergent replay conflicts and
 cannot create another room. If recovery export or download fails, no room is

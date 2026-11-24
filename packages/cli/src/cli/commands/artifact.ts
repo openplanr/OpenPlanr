@@ -216,12 +216,26 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
 
 const REVIEW_LINK_LABEL = 'Review link (safe to share)';
 
-type SecretHandoff = { handoff: ArtifactSecretUrlHandoff } | { error: string };
+type SecretHandoff = { handoff: ArtifactSecretUrlHandoff; waitMs: number } | { error: string };
+
+/** The handoff wait; `OPENPLANR_HANDOFF_WAIT_MS` shortens it for tests. */
+function handoffWaitMs(): number {
+  const raw = process.env.OPENPLANR_HANDOFF_WAIT_MS?.trim();
+  if (!raw) return ARTIFACT_HANDOFF_WAIT_MS;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0)
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_INPUT_INVALID',
+      `OPENPLANR_HANDOFF_WAIT_MS must be a positive whole number of milliseconds, not "${raw}".`,
+    );
+  return value;
+}
 
 /** Opens a capability URL through the loopback handoff; a launch failure is reported, not fatal. */
 async function startSecretHandoff(url: string): Promise<SecretHandoff> {
+  const waitMs = handoffWaitMs();
   try {
-    return { handoff: await openArtifactSecretUrl(url) };
+    return { handoff: await openArtifactSecretUrl(url, { waitMs }), waitMs };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
@@ -248,14 +262,10 @@ async function reportBrowserHandoff(
     warn(`The browser could not be opened: ${browser.error} ${fallback}`);
     return;
   }
-  if (!json)
-    logger.dim(
-      `Waiting up to ${ARTIFACT_HANDOFF_WAIT_MS / 1000} seconds for the browser to open the link…`,
-    );
+  const seconds = browser.waitMs / 1000;
+  if (!json) logger.dim(`Waiting up to ${seconds} seconds for the browser to open the link…`);
   if (!(await browser.handoff.served))
-    warn(
-      `The browser did not open the link within ${ARTIFACT_HANDOFF_WAIT_MS / 1000} seconds. ${fallback}`,
-    );
+    warn(`The browser did not open the link within ${seconds} seconds. ${fallback}`);
 }
 
 async function shareArtifact(program: Command, file: string, options: ShareOptions): Promise<void> {

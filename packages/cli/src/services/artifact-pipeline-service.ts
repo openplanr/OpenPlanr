@@ -1620,7 +1620,7 @@ export function readArtifactShareLinkStatus(input: string): ArtifactShareLinkSta
   const authority = new URLSearchParams(new URL(secret.reviewUrl).hash.slice(1));
   if (authority.has('o') || authority.has('m'))
     throw new ArtifactCommandError(
-      'E_ARTIFACT_SECRET_INPUT',
+      'E_ARTIFACT_INPUT_INVALID',
       'The saved review link carries owner or management authority; it is not safe to share.',
     );
   return { transport: secret.transport, reviewUrl: secret.reviewUrl };

@@ -819,7 +819,8 @@ the review URL can comment, the owner-verdict URL plus its matching private
 signer can decide, and the management URL can pause/reopen comments or delete
 the room but cannot decide. Live rooms require `--secret-output`; before any
 network request, the CLI makes an exact recovery bundle durable at mode 0600
-with the room key, the three scoped capabilities and the owner signer. A lost
+with the room key, the read capability, the three scoped capabilities
+(reviewer, owner-verdict, management) and the owner signer. A lost
 response retries the same prepared room once. Definite no-effect rejection
 revokes the bundle, while an ambiguous outcome retains it and emits only a
 bounded, path-free recovery error. `--snapshot` selects the older immutable
