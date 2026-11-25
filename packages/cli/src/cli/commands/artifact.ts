@@ -393,7 +393,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       display.keyValue(REVIEW_LINK_LABEL, result.url);
       display.keyValue('Private custody', 'exported');
       logger.dim(
-        'Owner-verdict and room-management links are only in the private file. Do not share them.',
+        'Owner-verdict and room-management capabilities are only in the private file. Do not share them.',
       );
       await reportBrowserHandoff(browser, true, false);
     }

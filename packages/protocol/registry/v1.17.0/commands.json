@@ -77,12 +77,12 @@
       "machineJson": true,
       "source": {
         "path": "packages/cli/src/cli/commands/artifact.ts",
-        "digest": "sha256:07452952ac9a17eeb28818ccae6a183de0fc316cc73e0adbc1554ef13a42d392"
+        "digest": "sha256:8a9f2caa0c110579c126a79104c6954268f4179b6d57d1038729adbfcde96a03"
       },
       "testRefs": [
         "packages/cli/tests/unit/artifact-paste-custody.test.ts"
       ]
     }
   ],
-  "documentDigest": "sha256:b39ef662089540bb07fdd8f409bf71962293ead54064779bb041ff11facbf830"
+  "documentDigest": "sha256:d05c87d0eb439b0f24c3ce8fd11be4e993251b8c450c2eafe7f613b808061525"
 }

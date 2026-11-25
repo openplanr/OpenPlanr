@@ -828,8 +828,8 @@ fragment/short-link flow. Live rooms and encrypted short links expire after
 seven days unless `--ttl 1d` or `--ttl 30d` is given.
 
 A created live room or encrypted short link prints `Review link (safe to share)`
-and adds `reviewUrl` to `--json`. That is the link to send. Owner-verdict and
-management links and the short link's deletion token stay in the private file;
+and adds `reviewUrl` to `--json`. That is the link to send. The owner-verdict and
+management capabilities and the short link's deletion token stay in the private file;
 `artifact status <private-file>` prints the review link again later. Fragment
 links carry the encoded artifact, so they are not printed; with `--no-open` they
 are written to the `--secret-output` file. When the command opens the browser, it

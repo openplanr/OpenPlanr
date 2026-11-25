@@ -934,7 +934,7 @@ describePosix('artifact share review links', { timeout: 30_000 }, () => {
       const second = readPrivate(join(dir, 'room2.json'));
       expect(human.stdout).toContain(`Review link (safe to share):  ${roomReviewUrl(second)}`);
       expect(human.stdout).toContain(
-        'Owner-verdict and room-management links are only in the private file.',
+        'Owner-verdict and room-management capabilities are only in the private file.',
       );
       expect(human.stdout).not.toContain('Waiting up to');
       expectNoOwnerSecrets(`${human.stdout}${human.stderr}`, second, dir);
