@@ -1,9 +1,18 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
@@ -474,8 +483,6 @@ describe('openplanr artifact and retired pipeline facade', { timeout: 30_000 }, 
         opened: false,
         secretExported: true,
       });
-      expect(`${result.stdout}${result.stderr}`).not.toMatch(/#k=|[&?](?:w|o|m)=/u);
-      expect(`${result.stdout}${result.stderr}`).not.toContain(dir);
       expect(requests).toHaveLength(2);
       expect(requests[1]).toEqual(requests[0]);
       expect(logicalRooms.size).toBe(1);
@@ -493,6 +500,8 @@ describe('openplanr artifact and retired pipeline facade', { timeout: 30_000 }, 
         ownerSigner: expect.objectContaining({ kind: 'openplanr-live-room-signer', role: 'owner' }),
       });
       expect(recovery).not.toHaveProperty('ciphertext');
+      expect(JSON.parse(result.stdout).reviewUrl).toBe(roomReviewUrl(readPrivate(recoveryPath)));
+      expectNoOwnerSecrets(`${result.stdout}${result.stderr}`, readPrivate(recoveryPath), dir);
       expect(requests[0]).not.toHaveProperty('reviewOf');
       expect(requests[0]).not.toHaveProperty('key');
       const roomApi = await import(
@@ -576,6 +585,573 @@ describe('openplanr artifact and retired pipeline facade', { timeout: 30_000 }, 
       ok: false,
       code: 'commander.unknownCommand',
       problem: "unknown command 'pipeline'",
+    });
+  });
+});
+
+interface ShareService {
+  readonly base: string;
+  close(): Promise<void>;
+}
+
+/** Minimal paste v2 and room v3 create endpoints, enough for a successful share. */
+async function startShareService(): Promise<ShareService> {
+  const server = createServer(async (request, response) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    const body = chunks.length
+      ? (JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>)
+      : {};
+    const expiresAt = '2099-08-30T00:00:00.000Z';
+    if (request.method === 'POST' && request.url === '/api/v2/pastes') {
+      response.writeHead(201, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          schemaVersion: '2.0.0',
+          operation: 'created',
+          id: body.id,
+          creationId: body.creationId,
+          deletionToken: request.headers['x-openplanr-paste-custody'],
+          expiresAt,
+        }),
+      );
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/api/v2/rooms') {
+      response.writeHead(201, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          id: body.roomId,
+          expiresAt,
+          descriptor: {
+            schemaVersion: '3.0.0',
+            protocolVersion: '3.0.0',
+            roomId: body.roomId,
+            reviewCommitment: body.reviewCommitment,
+            ownerKey: body.ownerKey,
+            capabilities: {
+              read: 'room-read',
+              reviewer: 'reviewer-write',
+              owner: 'owner-verdict',
+              management: 'room-management',
+            },
+            createdAt: '2026-08-23T00:00:00.000Z',
+          },
+          generation: 0,
+          head: `sha256:${'0'.repeat(64)}`,
+        }),
+      );
+      return;
+    }
+    response.writeHead(404).end('{}');
+  });
+  await new Promise<void>((resolveListen, rejectListen) => {
+    server.once('error', rejectListen);
+    server.listen(0, '127.0.0.1', resolveListen);
+  });
+  const address = server.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
+  return {
+    base: `http://127.0.0.1:${port}`,
+    close: () => new Promise<void>((resolveClose) => server.close(() => resolveClose())),
+  };
+}
+
+/**
+ * Puts `open` and `xdg-open` stand-ins first on PATH. Each records the URL it was given and
+ * fetches it once, one second later, from a detached process that outlives the CLI.
+ */
+function browserShim(dir: string): { env: Record<string, string>; log: string } {
+  const bin = join(dir, 'bin');
+  const log = join(dir, 'browser.log');
+  mkdirSync(bin);
+  const script = `#!${process.execPath}
+const { spawn } = require('node:child_process');
+const { appendFileSync } = require('node:fs');
+const url = process.argv[2];
+const log = ${JSON.stringify(log)};
+appendFileSync(log, JSON.stringify({ opened: url }) + '\\n');
+const fetchLater = \`setTimeout(async () => {
+  let result;
+  try {
+    const response = await fetch(\${JSON.stringify(url)}, { redirect: 'manual' });
+    result = { status: response.status, location: response.headers.get('location') };
+  } catch (error) {
+    result = { error: String(error && error.cause && error.cause.code ? error.cause.code : error) };
+  }
+  require('node:fs').appendFileSync(\${JSON.stringify(log)}, JSON.stringify(result) + '\\\\n');
+}, 1000);\`;
+spawn(process.execPath, ['-e', fetchLater], { detached: true, stdio: 'ignore' }).unref();
+`;
+  for (const name of ['open', 'xdg-open']) {
+    writeFileSync(join(bin, name), script);
+    chmodSync(join(bin, name), 0o755);
+  }
+  return { env: { PATH: `${bin}${delimiter}${process.env.PATH ?? ''}` }, log };
+}
+
+async function browserFetch(log: string): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const lines = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [];
+    const fetched = lines
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((entry) => !('opened' in entry));
+    if (fetched) return fetched;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  }
+  throw new Error('The browser stand-in never fetched the opened URL.');
+}
+
+interface RoomRecoveryFile {
+  kind: 'openplanr-live-room-recovery';
+  origin: string;
+  key: string;
+  body: Record<string, string>;
+  ownerSigner: { privateKey: string };
+}
+
+interface PastePreparationFile {
+  kind: 'openplanr-artifact-paste-preparation';
+  origin: string;
+  key: string;
+  custodyToken: string;
+  body: { id: string };
+}
+
+type PrivateShareFile = RoomRecoveryFile | PastePreparationFile;
+
+function readPrivate<T extends PrivateShareFile = RoomRecoveryFile>(file: string): T {
+  expect(lstatSync(file).mode & 0o777).toBe(0o600);
+  return JSON.parse(readFileSync(file, 'utf8')) as T;
+}
+
+function roomReviewUrl(recovery: RoomRecoveryFile): string {
+  const body = recovery.body;
+  return `${recovery.origin}/r/${body.roomId}#k=${recovery.key}&r=${body.readCapability}&w=${body.reviewerCapability}`;
+}
+
+function pasteReviewUrl(prepared: PastePreparationFile): string {
+  return `${prepared.origin}/p/${prepared.body.id}#k=${prepared.key}&v=2`;
+}
+
+/** Every owner or management secret the private file holds, by value. */
+function ownerSecrets(file: PrivateShareFile): string[] {
+  const values =
+    file.kind === 'openplanr-live-room-recovery'
+      ? [file.body.ownerCapability, file.body.manageCapability, file.ownerSigner.privateKey]
+      : [file.custodyToken];
+  for (const value of values) expect(value).toMatch(/^[A-Za-z0-9_-]{43,}$/u);
+  return values;
+}
+
+function expectNoOwnerSecrets(output: string, file: PrivateShareFile, dir: string): void {
+  for (const value of ownerSecrets(file)) expect(output).not.toContain(value);
+  expect(output).not.toMatch(/[&?#](?:o|m)=/u);
+  expect(output).not.toContain(dir);
+}
+
+/** The browser shims replace `open` and `xdg-open`; Windows launches through `cmd start`. */
+const describePosix = describe.skipIf(process.platform === 'win32');
+
+describePosix('artifact share review links', { timeout: 30_000 }, () => {
+  it('keeps the opened short-link handoff reachable until the browser uses it', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>opened short</title>');
+    const service = await startShareService();
+    const shim = browserShim(dir);
+    try {
+      const started = Date.now();
+      const result = await runAsync(
+        [
+          'artifact',
+          'share',
+          'artifact.html',
+          '--short',
+          '--snapshot',
+          '--ttl',
+          '30d',
+          '--json',
+          '--yes',
+        ],
+        dir,
+        {
+          ...shim.env,
+          OPENPLANR_SHARE_BASE: service.base,
+          PLANR_ARTIFACT_PASTE_CUSTODY_ROOT: join(dir, 'custody'),
+        },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      expect(Date.now() - started).toBeLessThan(20_000);
+      const output = JSON.parse(result.stdout);
+      expect(output).toMatchObject({ ok: true, transport: 'short', opened: true });
+      expect(await browserFetch(shim.log)).toEqual({ status: 302, location: output.reviewUrl });
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('keeps the opened live-room handoff reachable until the browser uses it', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>opened room</title>');
+    const service = await startShareService();
+    const shim = browserShim(dir);
+    try {
+      const result = await runAsync(
+        ['artifact', 'share', 'artifact.html', '--secret-output', 'room.json', '--yes'],
+        dir,
+        { ...shim.env, OPENPLANR_SHARE_BASE: service.base },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      const recovery = readPrivate(join(dir, 'room.json'));
+      expect(await browserFetch(shim.log)).toEqual({
+        status: 302,
+        location: roomReviewUrl(recovery),
+      });
+      expect(result.stdout).toContain('Waiting up to 30 seconds for the browser to open the link');
+      expect(result.stdout).not.toContain('did not open the link');
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('prints the encrypted short link and keeps the deletion token private', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>short link</title>');
+    const service = await startShareService();
+    const env = {
+      OPENPLANR_SHARE_BASE: service.base,
+      PLANR_ARTIFACT_PASTE_CUSTODY_ROOT: join(dir, 'custody'),
+    };
+    try {
+      const json = await runAsync(
+        [
+          'artifact',
+          'share',
+          'artifact.html',
+          '--short',
+          '--snapshot',
+          '--no-open',
+          '--secret-output',
+          'paste.json',
+          '--json',
+          '--yes',
+        ],
+        dir,
+        env,
+      );
+      expect(json.status, json.stderr).toBe(0);
+      const prepared = readPrivate<PastePreparationFile>(join(dir, 'paste.json'));
+      const reviewUrl = pasteReviewUrl(prepared);
+      expect(reviewUrl).toMatch(/\/p\/[A-Za-z0-9_-]{43}#k=[A-Za-z0-9_-]{43}&v=2$/u);
+      expect(JSON.parse(json.stdout)).toMatchObject({
+        ok: true,
+        transport: 'short',
+        reviewUrl,
+        opened: false,
+      });
+      expectNoOwnerSecrets(`${json.stdout}${json.stderr}`, prepared, dir);
+
+      const resumed = await runAsync(
+        ['artifact', 'share', 'artifact.html', '--resume', 'paste.json', '--no-open'],
+        dir,
+        env,
+      );
+      expect(resumed.status, resumed.stderr).toBe(0);
+      expect(resumed.stdout).toContain(`Review link (safe to share):  ${reviewUrl}`);
+      expect(resumed.stdout).toContain('The deletion token stays in private custody.');
+      expectNoOwnerSecrets(`${resumed.stdout}${resumed.stderr}`, prepared, dir);
+
+      const status = await runAsync(['artifact', 'status', 'paste.json', '--json'], dir);
+      expect(status.status, status.stderr).toBe(0);
+      expect(JSON.parse(status.stdout)).toEqual({
+        ok: true,
+        action: 'artifact_share_status',
+        transport: 'short',
+        reviewUrl,
+      });
+      expectNoOwnerSecrets(`${status.stdout}${status.stderr}`, prepared, dir);
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('prints the live-room reviewer link and keeps owner and management links private', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>room link</title>');
+    const service = await startShareService();
+    try {
+      const json = await runAsync(
+        [
+          'artifact',
+          'share',
+          'artifact.html',
+          '--presentation',
+          'document',
+          '--ttl',
+          '30d',
+          '--no-open',
+          '--secret-output',
+          'room.json',
+          '--json',
+          '--yes',
+        ],
+        dir,
+        { OPENPLANR_SHARE_BASE: service.base },
+      );
+      expect(json.status, json.stderr).toBe(0);
+      const recovery = readPrivate(join(dir, 'room.json'));
+      expect(Object.keys(recovery).sort()).toEqual([
+        'body',
+        'inputDigest',
+        'key',
+        'kind',
+        'origin',
+        'ownerSigner',
+        'reviewOf',
+        'schemaVersion',
+      ]);
+      const reviewUrl = roomReviewUrl(recovery);
+      expect(JSON.parse(json.stdout)).toMatchObject({
+        ok: true,
+        transport: 'live-room',
+        reviewUrl,
+        opened: false,
+      });
+      expectNoOwnerSecrets(`${json.stdout}${json.stderr}`, recovery, dir);
+
+      const human = await runAsync(
+        [
+          'artifact',
+          'share',
+          'artifact.html',
+          '--no-open',
+          '--secret-output',
+          'room2.json',
+          '--yes',
+        ],
+        dir,
+        { OPENPLANR_SHARE_BASE: service.base },
+      );
+      expect(human.status, human.stderr).toBe(0);
+      const second = readPrivate(join(dir, 'room2.json'));
+      expect(human.stdout).toContain(`Review link (safe to share):  ${roomReviewUrl(second)}`);
+      expect(human.stdout).toContain(
+        'Owner-verdict and room-management capabilities are only in the private file.',
+      );
+      expect(human.stdout).not.toContain('Waiting up to');
+      expectNoOwnerSecrets(`${human.stdout}${human.stderr}`, second, dir);
+
+      for (const args of [['--json'], []]) {
+        const status = await runAsync(['artifact', 'status', 'room.json', ...args], dir);
+        expect(status.status, status.stderr).toBe(0);
+        expect(status.stdout).toContain(reviewUrl);
+        expectNoOwnerSecrets(`${status.stdout}${status.stderr}`, recovery, dir);
+      }
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('prints the link and continues when the browser cannot be launched', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>no browser</title>');
+    const empty = join(dir, 'empty-path');
+    mkdirSync(empty);
+    const service = await startShareService();
+    try {
+      const json = await runAsync(
+        ['artifact', 'share', 'artifact.html', '--secret-output', 'room.json', '--json', '--yes'],
+        dir,
+        { PATH: empty, OPENPLANR_SHARE_BASE: service.base },
+      );
+      expect(json.status, json.stderr).toBe(0);
+      const recovery = readPrivate(join(dir, 'room.json'));
+      expect(JSON.parse(json.stdout)).toMatchObject({
+        ok: true,
+        reviewUrl: roomReviewUrl(recovery),
+        opened: false,
+      });
+      expect(json.stderr).toContain('The browser could not be opened');
+      expect(json.stderr).toContain('Use the review link above.');
+
+      const human = await runAsync(
+        ['artifact', 'share', 'artifact.html', '--secret-output', 'room2.json', '--yes'],
+        dir,
+        { PATH: empty, OPENPLANR_SHARE_BASE: service.base },
+      );
+      expect(human.status, human.stderr).toBe(0);
+      const second = readPrivate(join(dir, 'room2.json'));
+      expect(human.stdout).toContain(`Review link (safe to share):  ${roomReviewUrl(second)}`);
+      expect(human.stdout).toContain('The browser could not be opened');
+      expect(human.stdout).toContain('Use the review link above.');
+
+      const fragment = await runAsync(
+        ['artifact', 'share', 'artifact.html', '--snapshot', '--json', '--yes'],
+        dir,
+        { PATH: empty },
+      );
+      expect(fragment.status, fragment.stderr).toBe(0);
+      const output = JSON.parse(fragment.stdout);
+      expect(output).toMatchObject({ ok: true, transport: 'fragment', opened: false });
+      expect(output).not.toHaveProperty('reviewUrl');
+      expect(fragment.stderr).toContain('The browser could not be opened');
+      expect(fragment.stderr).toContain('--no-open --secret-output <private-file>');
+      expect(`${fragment.stdout}${fragment.stderr}`).not.toContain('#v1.');
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('reports opened false and warns when the browser never requests the link', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>never fetched</title>');
+    const bin = join(dir, 'bin');
+    mkdirSync(bin);
+    for (const name of ['open', 'xdg-open']) {
+      writeFileSync(join(bin, name), '#!/bin/sh\nexit 0\n');
+      chmodSync(join(bin, name), 0o755);
+    }
+    const env = {
+      PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`,
+      OPENPLANR_HANDOFF_WAIT_MS: '500',
+    };
+    const started = Date.now();
+    const json = await runAsync(
+      ['artifact', 'share', 'artifact.html', '--snapshot', '--json', '--yes'],
+      dir,
+      env,
+    );
+    expect(json.status, json.stderr).toBe(0);
+    expect(Date.now() - started).toBeLessThan(20_000);
+    expect(json.stdout.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      ok: true,
+      transport: 'fragment',
+      opened: false,
+    });
+    expect(json.stderr).toContain('The browser did not open the link within 0.5 seconds.');
+    expect(json.stderr).toContain('--no-open --secret-output <private-file>');
+
+    const human = await runAsync(
+      ['artifact', 'share', 'artifact.html', '--snapshot', '--yes'],
+      dir,
+      env,
+    );
+    expect(human.status, human.stderr).toBe(0);
+    expect(human.stdout).toContain('Waiting up to 0.5 seconds for the browser to open the link');
+    expect(human.stdout).toContain('The browser did not open the link within 0.5 seconds.');
+  });
+
+  it('completes the share and prints the link when the wait override is invalid', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>bad wait</title>');
+    const bin = join(dir, 'bin');
+    mkdirSync(bin);
+    for (const name of ['open', 'xdg-open']) {
+      writeFileSync(join(bin, name), '#!/bin/sh\nexit 0\n');
+      chmodSync(join(bin, name), 0o755);
+    }
+    const service = await startShareService();
+    try {
+      for (const [index, wait] of ['abc', '9999999999'].entries()) {
+        const json = await runAsync(
+          [
+            'artifact',
+            'share',
+            'artifact.html',
+            '--secret-output',
+            `room${index}.json`,
+            '--json',
+            '--yes',
+          ],
+          dir,
+          {
+            PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`,
+            OPENPLANR_SHARE_BASE: service.base,
+            OPENPLANR_HANDOFF_WAIT_MS: wait,
+          },
+        );
+        expect(json.status, json.stderr).toBe(0);
+        const recovery = readPrivate(join(dir, `room${index}.json`));
+        expect(JSON.parse(json.stdout)).toMatchObject({
+          ok: true,
+          reviewUrl: roomReviewUrl(recovery),
+          opened: false,
+        });
+        expect(json.stderr).toContain('The browser could not be opened');
+        expect(json.stderr).toContain('OPENPLANR_HANDOFF_WAIT_MS must be');
+        expect(json.stderr).not.toContain('TimeoutOverflowWarning');
+      }
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('refuses a saved owner or management link without echoing it', async () => {
+    const dir = temporary();
+    const key = 'K'.repeat(43);
+    const capability = 'Z'.repeat(43);
+    for (const parameter of ['o', '%6D']) {
+      const reviewUrl = `https://share.example.test/r/${'a'.repeat(16)}#k=${key}&${parameter}=${capability}`;
+      writeFileSync(
+        join(dir, 'owner.json'),
+        JSON.stringify({
+          schemaVersion: '1.0.0',
+          kind: 'openplanr-artifact-share-secrets',
+          transport: 'short',
+          reviewUrl,
+        }),
+        { mode: 0o600 },
+      );
+      chmodSync(join(dir, 'owner.json'), 0o600);
+      const refusal =
+        'The saved review link carries owner or management authority; it is not safe to share.';
+      const json = await runAsync(['artifact', 'status', 'owner.json', '--json'], dir);
+      expect(json.status).not.toBe(0);
+      expect(JSON.parse(json.stdout)).toMatchObject({
+        code: 'E_ARTIFACT_INPUT_INVALID',
+        problem: refusal,
+      });
+      const human = await runAsync(['artifact', 'status', 'owner.json'], dir);
+      expect(human.status).not.toBe(0);
+      const output = `${json.stdout}${json.stderr}${human.stdout}${human.stderr}`;
+      expect(output).toContain(refusal);
+      expect(output).not.toContain('requires a design-document.json');
+      for (const secret of [capability, key, reviewUrl, 'share.example.test'])
+        expect(output).not.toContain(secret);
+    }
+  });
+
+  it('keeps fragment links out of status output and refuses non-private share files', async () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>fragment</title>');
+    const shared = run(
+      [
+        'artifact',
+        'share',
+        'artifact.html',
+        '--snapshot',
+        '--no-open',
+        '--secret-output',
+        'f.json',
+        '--json',
+      ],
+      dir,
+    );
+    expect(shared.status, shared.stderr).toBe(0);
+    const status = await runAsync(['artifact', 'status', 'f.json', '--json'], dir);
+    expect(status.status, status.stderr).toBe(0);
+    expect(JSON.parse(status.stdout)).toEqual({
+      ok: true,
+      action: 'artifact_share_status',
+      transport: 'fragment',
+    });
+    expect(`${status.stdout}${status.stderr}`).not.toContain('#v1.');
+
+    chmodSync(join(dir, 'f.json'), 0o644);
+    const exposed = await runAsync(['artifact', 'status', 'f.json', '--json'], dir);
+    expect(exposed.status).not.toBe(0);
+    expect(JSON.parse(exposed.stdout)).toMatchObject({
+      code: 'E_ARTIFACT_INPUT_INVALID',
+      problem: expect.stringContaining('without group or world permissions'),
     });
   });
 });

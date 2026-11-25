@@ -2,8 +2,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Command } from 'commander';
 import {
+  ARTIFACT_HANDOFF_WAIT_MS,
   ArtifactCommandError,
   type ArtifactEnvelope,
+  type ArtifactSecretUrlHandoff,
   createArtifactReviewLinkWithSecretCustody,
   createLiveReviewRoomWithSecretCustody,
   loadArtifactPipeline,
@@ -212,6 +214,60 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
   }
 }
 
+const REVIEW_LINK_LABEL = 'Review link (safe to share)';
+
+type SecretHandoff = { handoff: ArtifactSecretUrlHandoff; waitMs: number } | { error: string };
+
+/** The handoff wait; `OPENPLANR_HANDOFF_WAIT_MS` shortens it for tests, up to the default. */
+function handoffWaitMs(): number {
+  const raw = process.env.OPENPLANR_HANDOFF_WAIT_MS?.trim();
+  if (!raw) return ARTIFACT_HANDOFF_WAIT_MS;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0 || value > ARTIFACT_HANDOFF_WAIT_MS)
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_INPUT_INVALID',
+      `OPENPLANR_HANDOFF_WAIT_MS must be a whole number of milliseconds from 1 to ${ARTIFACT_HANDOFF_WAIT_MS}, not "${raw}".`,
+    );
+  return value;
+}
+
+/** Opens a capability URL through the loopback handoff; any failure is reported, not fatal. */
+async function startSecretHandoff(url: string): Promise<SecretHandoff> {
+  try {
+    const waitMs = handoffWaitMs();
+    return { handoff: await openArtifactSecretUrl(url, { waitMs }), waitMs };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** True only when the browser fetched the handoff within its wait. */
+async function browserOpened(browser: SecretHandoff | undefined): Promise<boolean> {
+  return browser !== undefined && 'handoff' in browser ? browser.handoff.served : false;
+}
+
+/** Reports how the browser handoff ended; in `--json` mode warnings go to stderr. */
+async function reportBrowserHandoff(
+  browser: SecretHandoff | undefined,
+  linkPrinted: boolean,
+  json: boolean,
+): Promise<void> {
+  if (!browser) return;
+  const warn = (message: string) =>
+    json ? process.stderr.write(`${message}\n`) : logger.warn(message);
+  const fallback = linkPrinted
+    ? 'Use the review link above.'
+    : 'Rerun with `--no-open --secret-output <private-file>` to keep the link.';
+  if ('error' in browser) {
+    warn(`The browser could not be opened: ${browser.error} ${fallback}`);
+    return;
+  }
+  const seconds = browser.waitMs / 1000;
+  if (!json) logger.dim(`Waiting up to ${seconds} seconds for the browser to open the link…`);
+  if (!(await browser.handoff.served))
+    warn(`The browser did not open the link within ${seconds} seconds. ${fallback}`);
+}
+
 async function shareArtifact(program: Command, file: string, options: ShareOptions): Promise<void> {
   if (options.resume) {
     if (options.ttl !== undefined)
@@ -310,19 +366,22 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       baseUrl: process.env.OPENPLANR_SHARE_BASE ?? 'https://share.openplanr.dev',
       ttl: options.ttl ?? '7d',
     });
-    if (options.open !== false) await openArtifactSecretUrl(result.url);
-    const safe = {
-      ok: true,
-      action: 'artifact_live_room_created',
-      transport: 'live-room',
-      handle: result.id,
-      expiresAt: result.expiresAt,
-      presentation: prepared.presentation,
-      opened: options.open !== false,
-      secretExported: true,
-    };
+    const browser = options.open !== false ? await startSecretHandoff(result.url) : undefined;
     if (options.json) {
-      display.line(JSON.stringify(safe));
+      display.line(
+        JSON.stringify({
+          ok: true,
+          action: 'artifact_live_room_created',
+          transport: 'live-room',
+          handle: result.id,
+          reviewUrl: result.url,
+          expiresAt: result.expiresAt,
+          presentation: prepared.presentation,
+          opened: await browserOpened(browser),
+          secretExported: true,
+        }),
+      );
+      await reportBrowserHandoff(browser, true, true);
     } else {
       logger.success('Encrypted live review room created');
       display.keyValue('Room', result.id);
@@ -331,10 +390,12 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       }
       display.keyValue('Presentation', prepared.presentation);
       if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
+      display.keyValue(REVIEW_LINK_LABEL, result.url);
       display.keyValue('Private custody', 'exported');
       logger.dim(
-        'The private file contains separate reviewer, owner-verdict, and room-management capabilities.',
+        'Owner-verdict and room-management capabilities are only in the private file. Do not share them.',
       );
+      await reportBrowserHandoff(browser, true, false);
     }
     return;
   }
@@ -380,19 +441,25 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     },
   });
   const url = String(result.url);
-  if (options.open !== false) await openArtifactSecretUrl(url);
-  const safe = {
-    ok: true,
-    action: 'artifact_snapshot_created',
-    transport: String(result.transport),
-    uploaded: Boolean(result.uploaded),
-    expiresAt: result.expiresAt,
-    presentation: prepared.presentation,
-    opened: options.open !== false,
-    secretExported: Boolean(options.secretOutput),
-  };
-  if (options.json) display.line(JSON.stringify(safe));
-  else {
+  // Fragment links carry the encoded artifact itself, so only the encrypted short link is printed.
+  const printable = result.transport === 'short';
+  const browser = options.open !== false ? await startSecretHandoff(url) : undefined;
+  if (options.json) {
+    display.line(
+      JSON.stringify({
+        ok: true,
+        action: 'artifact_snapshot_created',
+        transport: String(result.transport),
+        uploaded: Boolean(result.uploaded),
+        ...(printable ? { reviewUrl: url } : {}),
+        expiresAt: result.expiresAt,
+        presentation: prepared.presentation,
+        opened: await browserOpened(browser),
+        secretExported: Boolean(options.secretOutput),
+      }),
+    );
+    await reportBrowserHandoff(browser, printable, true);
+  } else {
     logger.success(
       result.uploaded ? 'Encrypted short link created' : 'Private fragment link created',
     );
@@ -402,6 +469,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     }
     display.keyValue('Presentation', prepared.presentation);
     if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
+    if (printable) display.keyValue(REVIEW_LINK_LABEL, url);
     display.keyValue(
       'Private custody',
       options.secretOutput
@@ -410,6 +478,8 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
           ? 'saved locally'
           : 'browser handoff only',
     );
+    if (printable) logger.dim('The deletion token stays in private custody. Do not share it.');
+    await reportBrowserHandoff(browser, printable, false);
   }
 }
 
