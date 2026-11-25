@@ -93,7 +93,7 @@ function emit(json: boolean, result: object, summarize: () => void) {
   else summarize();
 }
 
-/** Prints the reviewer link from a private share file; owner and management links stay in the file. */
+/** Prints the reviewer link from a private share file; owner and management capabilities stay in the file. */
 function emitShareFileStatus(input: string, json: boolean): void {
   let status: ArtifactShareLinkStatus;
   try {
