@@ -87,11 +87,16 @@ async function installMetrics(page: Page) {
   });
 }
 
+/** The last phase a trace test marked, named in its failure when it runs out of time. */
+let tracePhase: string | null = null;
+
 async function markPhase(page: Page, phase: string) {
+  tracePhase = phase;
   await page.evaluate((phase) => window.__dashboardLayoutShifts.markPhase(phase), phase);
 }
 
 async function markInputAction(page: Page, phase: string) {
+  tracePhase = phase;
   await page.evaluate((phase) => {
     window.__dashboardLayoutShifts.markPhase(phase);
     window.__dashboardLayoutShifts.markInputAction();
@@ -170,6 +175,7 @@ async function warmRoute(page: Page, route: string, kind: string) {
   const menu = page.locator('[data-chrome-slot="menu"]');
   const before = await menu.boundingBox();
   if (!before) throw new Error('Missing floating menu pill.');
+  tracePhase = `route-load ${route}`;
   const durationMs = await page.evaluate(
     async ({ route, kind }) => {
       window.__dashboardLayoutShifts.markPhase(`route-load ${route}`);
@@ -260,17 +266,20 @@ async function interactionTrace(
       step += 1;
     }
   } finally {
-    ended = await page.evaluate(() => {
-      performance.mark('dashboard-interaction-end');
-      window.__dashboardMetrics.tracing = false;
-      return performance.now();
-    });
-    const complete = new Promise<void>((resolve) =>
-      session.once('Tracing.tracingComplete', () => resolve()),
-    );
-    await session.send('Tracing.end');
-    await complete;
-    await session.detach();
+    // A test timeout closes the page; cleanup must not replace the timeout with a closed-page error.
+    if (!page.isClosed()) {
+      ended = await page.evaluate(() => {
+        performance.mark('dashboard-interaction-end');
+        window.__dashboardMetrics.tracing = false;
+        return performance.now();
+      });
+      const complete = new Promise<void>((resolve) =>
+        session.once('Tracing.tracingComplete', () => resolve()),
+      );
+      await session.send('Tracing.end');
+      await complete;
+      await session.detach();
+    }
   }
   const measured = await page.evaluate(
     ({ started, end }) => {
@@ -369,21 +378,29 @@ async function selectionSample(page: Page, id: string): Promise<SelectionSample>
 
 export function registerDashboardPerformanceTraceTests() {
   test.afterEach(async ({ page }, testInfo) => {
-    if (page.isClosed()) return;
-    const raw = await page.evaluate(() => window.__dashboardLayoutShifts?.snapshot());
-    if (!raw || raw.shifts.length === 0) return;
-    const layoutShifts = aggregateDashboardLayoutShifts(raw);
-    await testInfo.attach('dashboard-layout-shifts.json', {
-      body: Buffer.from(JSON.stringify({ test: testInfo.title, ...layoutShifts }, null, 2)),
-      contentType: 'application/json',
-    });
+    const raw = page.isClosed()
+      ? undefined
+      : await page.evaluate(() => window.__dashboardLayoutShifts?.snapshot());
+    if (raw && raw.shifts.length > 0) {
+      const layoutShifts = aggregateDashboardLayoutShifts(raw);
+      await testInfo.attach('dashboard-layout-shifts.json', {
+        body: Buffer.from(JSON.stringify({ test: testInfo.title, ...layoutShifts }, null, 2)),
+        contentType: 'application/json',
+      });
+    }
+    const phase = tracePhase;
+    tracePhase = null;
+    if (phase !== null && testInfo.status === 'timedOut')
+      throw new Error(`${testInfo.title} ran out of time during "${phase}".`);
   });
   for (const dataset of ['representative', 'scaling'] as const) {
     test(`records production dashboard ${dataset} performance`, async ({
       page,
       browser,
     }, testInfo) => {
-      test.setTimeout(240_000);
+      // A runtime cap, not a performance budget: scaling records 50 sequential 5,000-node patches unbudgeted.
+      test.setTimeout(dataset === 'scaling' ? 360_000 : 240_000);
+      tracePhase = 'setup';
       const fixture = buildPremiumDashboardFixture(dataset);
       const errors: string[] = [];
       const assets = new Set<string>();
