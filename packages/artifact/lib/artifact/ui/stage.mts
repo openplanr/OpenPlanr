@@ -1316,11 +1316,7 @@ export function mountArtifactStage({
           },
         });
     };
-    const timer = window.setTimeout(() => {
-      const error: Coded = new Error(`Artifact frame did not finish loading: ${artifact.id}`);
-      error.code = 'E_ARTIFACT_FRAME_TIMEOUT';
-      fail(error);
-    }, frameLoadTimeoutMs);
+    let timer: number | undefined;
     let loaded = false;
     const ready = () => {
       if (
@@ -1356,8 +1352,14 @@ export function mountArtifactStage({
       frame.removeEventListener('error', onError);
       frame.removeEventListener('planr:artifact-bridge-ready', ready);
     };
+    // Stamp the start before arming the deadline so a stall between them cannot shorten elapsedMs.
     frameStatus(artifact.id, 'loading', 'source');
     if (!current()) return record.promise;
+    timer = window.setTimeout(() => {
+      const error: Coded = new Error(`Artifact frame did not finish loading: ${artifact.id}`);
+      error.code = 'E_ARTIFACT_FRAME_TIMEOUT';
+      fail(error);
+    }, frameLoadTimeoutMs);
     // Source preparation can be asynchronous; it cannot revive an evicted frame.
     // Frames load only after the stage checked that resolveArtifactSource is a function.
     void (async () => {

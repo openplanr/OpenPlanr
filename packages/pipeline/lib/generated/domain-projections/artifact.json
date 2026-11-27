@@ -1537,7 +1537,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "06dfb83252db18d4f600f0599617e9b7ca44fa8b0942d80241c4f14652ae621e",
+      "sha256": "1838852b2a83fb604a4156aa8d448728f1f439f5e9c343c9e00f1c6ef8f89843",
       "mode": "644"
     },
     {
@@ -1729,7 +1729,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/stage.mjs",
       "target": "lib/artifact/ui/stage.mjs",
-      "sha256": "9c4b3fb3271efbfbe2478cc4d6ae92460c56325e0f6b8e93ed4d723208014419",
+      "sha256": "34350859496972788c45e00996956139bfe9fc6f66d78f09df7233d2631bd1ed",
       "mode": "644"
     },
     {
@@ -2077,7 +2077,7 @@
     {
       "source": "packages/artifact/templates/artifact-review-stage.js",
       "target": "templates/artifact-review-stage.js",
-      "sha256": "e86f099d81e184fffe134a8792fcaec2eb31d195cde62b3a535da8c1d62f3314",
+      "sha256": "b17092206b6105366328327aa718a88acfe27174cdf8ebdfbb9ad56f1b3eb301",
       "mode": "644"
     },
     {
