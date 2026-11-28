@@ -1,0 +1,10 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:ship" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/docs/changes/0004-note-tags.md" } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/src/notes.js", "old_string": "done: false,", "new_string": "done: false,\n    tags: normalizeTags(options.tags)," } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/src/server.js", "old_string": "{ due: input.due }", "new_string": "{ due: input.due, tags: input.tags }" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/test/tags.test.js", "content": "..." } },
+    { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 11, fail 0" }
+  ]
+}

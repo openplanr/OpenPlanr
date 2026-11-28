@@ -1,0 +1,14 @@
+{
+  "guard": true,
+  "graders": {
+    "skill-spec-fired": true
+  },
+  "judge": {
+    "spec-present": true,
+    "requirements-testable": true,
+    "named-modules-exist": true,
+    "no-unrequested-feature": true,
+    "lists-non-goals": true,
+    "lists-open-questions": true
+  }
+}

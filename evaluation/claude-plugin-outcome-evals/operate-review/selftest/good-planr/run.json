@@ -1,0 +1,9 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:operate" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/metrics/2026-10.csv" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/company/incidents/2026-10.md" } },
+    { "name": "Skill", "input": { "skill": "planr:cpo-review" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/operate/2026-11-leadership-review.md", "content": "..." } }
+  ]
+}

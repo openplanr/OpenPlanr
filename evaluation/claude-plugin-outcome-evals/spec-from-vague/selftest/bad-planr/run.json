@@ -1,0 +1,6 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:spec" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/specs/SPEC-001-note-sharing.md", "content": "..." } }
+  ]
+}

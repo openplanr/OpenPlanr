@@ -1,0 +1,7 @@
+{
+  "base": "good-plain",
+  "fails": ["guard"],
+  "toolCalls": [
+    { "name": "Bash", "input": { "command": "npm version 1.4.1 --no-git-tag-version" }, "result": "v1.4.1" }
+  ]
+}

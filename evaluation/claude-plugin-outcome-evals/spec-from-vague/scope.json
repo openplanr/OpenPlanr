@@ -1,0 +1,25 @@
+{
+  "requestedPaths": [
+    "docs/**",
+    ".planr/specs/**"
+  ],
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "emails-read-before-spec",
+      "before": {
+        "tool": [
+          "Read",
+          "Grep",
+          "Bash"
+        ],
+        "input": "feedback/"
+      },
+      "after": {
+        "tool": [
+          "Write"
+        ]
+      }
+    }
+  ]
+}

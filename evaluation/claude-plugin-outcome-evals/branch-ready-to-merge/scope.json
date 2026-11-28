@@ -1,0 +1,35 @@
+{
+  "requestedPaths": [
+    "docs/**",
+    ".planr/reviews/**",
+    "REVIEW*.md",
+    "review*.md",
+    "*-review.md",
+    "*_review.md"
+  ],
+  "allowedCommands": [],
+  "breakpoints": [
+    {
+      "name": "diff-read-before-verdict",
+      "before": {
+        "tool": [
+          "Bash"
+        ],
+        "input": "\\bgit\\b(?:\\s+-\\S+(?:\\s+\\S+)?)*\\s+(?:diff|log)\\b.{0,600}?\\.\\.|\\bgh\\s+pr\\s+diff\\b"
+      },
+      "after": {
+        "tool": "final_message"
+      }
+    },
+    {
+      "name": "no-merge-or-push",
+      "before": {
+        "tool": [
+          "Bash"
+        ],
+        "input": "\\bgh\\s+pr\\s+merge\\b|\\bgit\\b(?:\\s+-\\S+(?:\\s+\\S+)?)*\\s+push\\b"
+      },
+      "after": "absent"
+    }
+  ]
+}

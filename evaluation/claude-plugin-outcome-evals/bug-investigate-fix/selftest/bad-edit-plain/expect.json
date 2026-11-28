@@ -1,0 +1,11 @@
+{
+  "hidden": true,
+  "guard": false,
+  "graders": {
+    "format-regression-test-added": false,
+    "skill-investigate-fired": false
+  },
+  "judge": {
+    "names-root-cause": true
+  }
+}

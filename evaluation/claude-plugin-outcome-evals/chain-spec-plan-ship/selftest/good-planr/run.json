@@ -1,0 +1,13 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:spec" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/feedback/2026-10-30-reminders.txt" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/specs/SPEC-001-due-date-reminders.md", "content": "..." } },
+    { "name": "Skill", "input": { "skill": "planr:plan" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/plans/PLAN-001-due-date-reminders.md", "content": "..." } },
+    { "name": "Skill", "input": { "skill": "planr:ship" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/src/reminders.js", "content": "..." } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/test/reminders.test.js", "content": "..." } },
+    { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 10, fail 0" }
+  ]
+}

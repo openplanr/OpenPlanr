@@ -1,0 +1,8 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:spec" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/feedback/2026-10-06-acme.txt" } },
+    { "name": "Read", "input": { "file_path": "/tmp/e-x/home/cwd/feedback/2026-10-14-brightlane.txt" } },
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/.planr/specs/SPEC-001-note-sharing.md", "content": "..." } }
+  ]
+}

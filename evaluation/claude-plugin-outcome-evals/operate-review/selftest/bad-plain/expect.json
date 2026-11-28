@@ -1,0 +1,20 @@
+{
+  "guard": true,
+  "graders": {
+    "cites-activation-drop": false,
+    "skill-operate-fired": false
+  },
+  "judge": {
+    "finds-activation-drop": false,
+    "finds-sync-reliability": false,
+    "finds-roadmap-gap": true,
+    "finds-short-runway": true,
+    "finds-account-concentration": false,
+    "finds-unbudgeted-contract": false,
+    "august-dip-not-flagged": true,
+    "alert-storm-not-flagged": true,
+    "recommendations-cite-facts": false,
+    "flags-missing-retention": false,
+    "actions-have-owners": false
+  }
+}

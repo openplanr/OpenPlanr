@@ -1,0 +1,5 @@
+{
+  "toolCalls": [
+    { "name": "Write", "input": { "file_path": "/tmp/e-x/home/cwd/src/reminders.js", "content": "..." } }
+  ]
+}

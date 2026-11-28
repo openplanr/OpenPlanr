@@ -1,0 +1,7 @@
+{
+  "toolCalls": [
+    { "name": "Skill", "input": { "skill": "planr:ship" } },
+    { "name": "Edit", "input": { "file_path": "/tmp/e-x/home/cwd/src/notes.js", "old_string": "done: false,", "new_string": "done: false,\n    tags: options.tags ?? []," } },
+    { "name": "Bash", "input": { "command": "npm test" }, "result": "pass 9, fail 0" }
+  ]
+}
