@@ -20,6 +20,7 @@ function fixture(
     frameLoadTimeoutMs,
     omitResolver = false,
     assignedSource,
+    beforeMount,
   } = {},
 ) {
   const artifacts = Array.from({ length: count }, (_, i) => ({
@@ -55,6 +56,7 @@ function fixture(
   let url = 0;
   dom.window.URL.createObjectURL = () => `blob:fixture-${++url}`;
   dom.window.URL.revokeObjectURL = (value) => revoked.push(value);
+  beforeMount?.(dom.window);
   const stage = mountArtifactStage({
     document,
     window: dom.window,
@@ -643,6 +645,34 @@ test('an unresolved source has a bounded deadline, phase evidence, and a working
   await f.stage.ready;
   assert.equal(f.stage.getState().status, 'ready');
   assert.equal(f.stage.getFrameDiagnostics()[0].attempt, 2);
+});
+
+test('a frame timeout reports at least its deadline when the host stalls after arming it', async (t) => {
+  const f = fixture(t, {
+    budget: null,
+    frameLoadTimeoutMs: 25,
+    resolver: () => new Promise(() => {}),
+    beforeMount(window) {
+      const setTimeout = window.setTimeout.bind(window);
+      window.setTimeout = (handler, delay, ...args) => {
+        const id = setTimeout(handler, delay, ...args);
+        if (delay === 25) {
+          const stalled = performance.now();
+          while (performance.now() - stalled < 10) {}
+        }
+        return id;
+      };
+    },
+  });
+  await f.stage.ready;
+  const diagnostic = f.stage.getFrameDiagnostics()[0];
+  assert.equal(diagnostic.code, 'E_ARTIFACT_FRAME_TIMEOUT');
+  assert.equal(diagnostic.failedPhase, 'source');
+  // Host timers count whole milliseconds, so a 25 ms deadline can fire after 24 ms.
+  assert.ok(
+    diagnostic.elapsedMs >= 24,
+    `elapsedMs ${diagnostic.elapsedMs} is below the 25 ms deadline`,
+  );
 });
 
 test('an explicit eager host settles all untrusted frames with deadlines while its active trusted frame stays ready', async (t) => {
