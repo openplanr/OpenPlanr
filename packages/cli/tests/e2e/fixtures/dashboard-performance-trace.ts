@@ -378,6 +378,8 @@ async function selectionSample(page: Page, id: string): Promise<SelectionSample>
 
 export function registerDashboardPerformanceTraceTests() {
   test.afterEach(async ({ page }, testInfo) => {
+    const phase = tracePhase;
+    tracePhase = null;
     const raw = page.isClosed()
       ? undefined
       : await page.evaluate(() => window.__dashboardLayoutShifts?.snapshot());
@@ -388,8 +390,6 @@ export function registerDashboardPerformanceTraceTests() {
         contentType: 'application/json',
       });
     }
-    const phase = tracePhase;
-    tracePhase = null;
     if (phase !== null && testInfo.status === 'timedOut')
       throw new Error(`${testInfo.title} ran out of time during "${phase}".`);
   });
