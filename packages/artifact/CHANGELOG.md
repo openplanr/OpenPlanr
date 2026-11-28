@@ -1,5 +1,11 @@
 # @openplanr/artifact
 
+## 0.8.5
+
+### Patch Changes
+
+- 059a919: When a review frame times out while loading, its diagnostics now report an elapsed time of at least the load deadline, to within a millisecond, instead of sometimes a shorter one.
+
 ## 0.8.4
 
 ### Patch Changes
