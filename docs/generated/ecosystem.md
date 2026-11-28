@@ -5,20 +5,20 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 
 | Package | Version | Path | Publication |
 |---|---:|---|---|
-| `openplanr` | 3.8.0 | `packages/cli` | public |
-| `planr-pipeline` | 0.65.0 | `packages/pipeline` | public |
+| `openplanr` | 3.9.0 | `packages/cli` | public |
+| `planr-pipeline` | 0.65.1 | `packages/pipeline` | public |
 | `@openplanr/protocol` | 0.19.0 | `packages/protocol` | public |
 | `@openplanr/canvas` | 0.0.1 | `packages/canvas` | private |
 | `@openplanr/operate` | 0.1.26 | `packages/operate` | private |
-| `@openplanr/artifact` | 0.8.4 | `packages/artifact` | private |
-| `@openplanr/design` | 0.6.4 | `packages/design` | private |
+| `@openplanr/artifact` | 0.8.5 | `packages/artifact` | private |
+| `@openplanr/design` | 0.6.5 | `packages/design` | private |
 | `@openplanr/skill-runtime` | 0.3.4 | `packages/skill-runtime` | private |
 | `@openplanr/integrations` | 0.1.2 | `packages/integrations` | private |
 | `@openplanr/dashboard-app` | 0.1.26 | `apps/dashboard` | private |
 
 Compatibility invariants:
 
-- `openplanr` uses the exact optional `planr-pipeline@0.65.0` dependency.
+- `openplanr` uses the exact optional `planr-pipeline@0.65.1` dependency.
 - The public pipeline retains 59 export keys and 228 root symbols.
 - Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
 - Commands, skills, roles, and output contracts are catalog-bound.

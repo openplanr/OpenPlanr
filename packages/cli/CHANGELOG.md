@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.9.0
+
+### Minor Changes
+
+- 0f3ffd2: `openplanr artifact share` now prints the review link to send for live rooms and encrypted short links, and a link it opens stays reachable until the browser requests it or 30 seconds pass. `openplanr artifact status <private-file>` shows that link again, and in `--json` `opened` is `true` only when the browser requested the link.
+- 69c6870: From 600px wide, the dashboard's navigation, tools, status and inspector float over the page instead of taking fixed columns. The menu pill holds search, find, the navigation panel toggle, keyboard shortcuts and the theme, and its view name opens a navigation panel with every view that you can pin. The tool pill carries the view's controls with their shortcuts; on the List, 1 to 3 group by spec, status or type, F focuses the filter and D switches density. The action pill shows Read-only or Governed actions, the Live state and the sidebar toggle, which marks a selection. The sidebar has Inspector and Outline tabs and opens with Enter or the toggle. The round help button shows the build, branch, totals and shortcuts in place of the status bar. Alt+[ and Alt+] open the navigation panel and the sidebar, Alt+Z hides all chrome, and F6 moves between regions. Pinned panels are remembered per project. Phones keep the top bar, bottom navigation and full-height inspector.
+- 69c6870: The dashboard Graph fills the window and pans and zooms smoothly to thousands of items. Drag or scroll to move around; pinch or Ctrl/Cmd+scroll zooms around the pointer, including over cards, and never zooms the page. Below 40% zoom the Graph switches to an overview of the whole project. Lenses, type and done toggles and Fit sit in the tool pill, the focus summary in the navigation panel and the minimap in the bottom corner; clicking the minimap moves the view. F now fits the selection into view without changing the lens; focusing on an item's lineage is the Focus button in the navigation panel. On phones the Graph tools sit under the top bar and the minimap and outline are in More.
+
+### Patch Changes
+
+- 059a919: When a review frame times out while loading, its diagnostics now report an elapsed time of at least the load deadline, to within a millisecond, instead of sometimes a shorter one.
+- d60b76d: Include the referenced design schemas when installing individual skills directly from the repository. Design, design-loop, design-review, and plan now include their complete declared resources without a build step.
+- a6264fb: The dashboard Graph fits its content again when the window grows, until you pan or zoom. The shortcut help says that F6 and Shift+F6 leave the key to the browser past the last or first region. The Graph minimap draws cards in a quiet neutral and fits both the graph and the visible area, so its viewport frame always sits inside the map. The List keeps its table, headers and page title from 900px wide while the table fits beside any pinned panels, drops the Labels column below 1200px or when it does not fit, and wraps its filter chips instead of clipping them. Actions, Cycles, Evidence, Outcomes and History show their page title first, with the counts below it. Unavailable steps on Today and Recovery look disabled and say which `openplanr operate` command to run in your terminal. The ☰ menu now holds only search, find, the navigation panel toggle, keyboard shortcuts and the theme; the view name opens the navigation panel with every view.
+- f922db8: Read object entries in inline planning lists consistently across the CLI and dashboard. Dashboard detail, editor link, and operating origin reads report verification failures and preserve recovery for temporary errors.
+
 ## 3.8.0
 
 ### Minor Changes

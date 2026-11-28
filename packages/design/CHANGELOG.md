@@ -1,5 +1,12 @@
 # @openplanr/design
 
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies [059a919]
+  - @openplanr/artifact@0.8.5
+
 ## 0.6.4
 
 ### Patch Changes

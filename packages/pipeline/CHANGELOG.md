@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.65.1
+
+### Patch Changes
+
+- 059a919: When a review frame times out while loading, its diagnostics now report an elapsed time of at least the load deadline, to within a millisecond, instead of sometimes a shorter one.
+- 0f3ffd2: The artifact review and protocol docs now list every secret a live room's private recovery file holds: the room key, the read capability, the reviewer, owner-verdict and management capabilities, and the owner signer.
+- f922db8: Read object entries in inline planning lists consistently across the CLI and dashboard. Dashboard detail, editor link, and operating origin reads report verification failures and preserve recovery for temporary errors.
+
 ## 0.65.0
 
 ### Minor Changes
